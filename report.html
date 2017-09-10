@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title>Report generator</title>
+
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+  </head>
+  <body>
+    
+    <div class="container">
+      <!-- Main component for a primary marketing message or call to action -->
+      <div class="jumbotron">
+        <h1>Report generator</h1>
+        <p>Paste your TinyRock or MicroPeak logs here and get a visual report.</p>
+      </div>
+
+      <h3>Input data</h3>
+      <p>Paste your log here:</p>
+      <textarea id="input" rows="15" class="form-control" style="min-width: 100%"></textarea>
+      <button id="go" type="button" class="btn btn-primary">Generate report</button>
+
+      <h3>Report</h3>      
+      <canvas id="chart1" style="min-width: 100%"></canvas>
+      <canvas id="chart2" style="min-width: 100%"></canvas>
+
+    </div> <!-- /container -->
+  
+  
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="js/bootstrap.min.js"></script>
+    
+    <script src="node_modules/chart.js/dist/Chart.js"></script>
+    <script>
+      var colors = {
+      	red: 'rgb(255, 99, 132)',
+      	orange: 'rgb(255, 159, 64)',
+      	yellow: 'rgb(255, 205, 86)',
+      	green: 'rgb(75, 192, 192)',
+      	blue: 'rgb(54, 162, 235)',
+      	purple: 'rgb(153, 102, 255)',
+      	grey: 'rgb(201, 203, 207)'
+      };
+      
+      var config1 = {
+        type: 'line',
+        data: {
+          //labels: ["January", "February", "March", "April", "May", "June", "July"],
+          datasets: [{
+            label: "Barometric altitude",
+            borderColor: colors.red,
+            backgroundColor: colors.red,
+            fill: false,
+            pointRadius: 0,
+            data: [{x:-1,y:70}, {x:4,y:30}],
+            yAxisID: "y-alt"
+          },
+          {
+            label: "Vertical velocity",
+            borderColor: colors.green,
+            backgroundColor: colors.green,
+            fill: false,
+            pointRadius: 0,
+            data: [{x:0,y:4}, {x:3,y:30}],
+            yAxisID: "y-speed"
+          },
+          {
+            label: "Vertical acceleration",
+            borderColor: colors.blue,
+            backgroundColor: colors.blue,
+            fill: false,
+            pointRadius: 0,
+            data: [{x:-1,y:2}, {x:4,y:-30}],
+            yAxisID: "y-speed"
+          }]
+        },
+        options: {
+          responsive: true,
+          title:{
+              display:true,
+              text:'Flight profile (altitude, velocity, acceleration)'
+          },
+          scales: {
+            xAxes: [{
+              scaleLabel: {
+  							display: true,
+                labelString: 'Time since liftoff, s',
+  						},
+              type: 'linear',
+              position: 'bottom'
+            }],
+            yAxes: [{
+              scaleLabel: {
+  							display: true,
+                labelString: 'Altitude, m',
+  						},
+              type: 'linear',
+              position: 'left',
+              id: "y-alt"
+            },
+            {
+              scaleLabel: {
+  							display: true,
+                labelString: 'Velocity, m/s or Acceleration, m/s^2',
+  						},
+              type: 'linear',
+              position: 'right',
+              id: "y-speed"
+            }]
+          }
+        }
+      };
+      
+      var config2 = {
+        type: 'line',
+        data: {
+          datasets: [{
+            label: "Mag. X",
+            borderColor: colors.red,
+            backgroundColor: colors.red,
+            fill: false,
+            pointRadius: 0,
+            data: []
+          },
+          {
+            label: "Mag. Y",
+            borderColor: colors.green,
+            backgroundColor: colors.green,
+            fill: false,
+            pointRadius: 0,
+            data: []
+          },
+          {
+            label: "Mag. Z",
+            borderColor: colors.blue,
+            backgroundColor: colors.blue,
+            fill: false,
+            pointRadius: 0,
+            data: []
+          }]
+        },
+        options: {
+          responsive: true,
+          title:{
+              display:true,
+              text:'Flight profile (magnetometer data)'
+          },
+          scales: {
+            xAxes: [{
+              scaleLabel: {
+  							display: true,
+                labelString: 'Time since liftoff, s',
+  						},
+              type: 'linear',
+              position: 'bottom'
+            }],
+            yAxes: [{
+              scaleLabel: {
+  							display: true,
+                //labelString: 'Altitude, m',
+  						},
+              type: 'linear',
+              position: 'left'
+            }]
+          }
+        }
+      };
+                
+      window.onload = function() {
+        var ctx1 = document.getElementById("chart1").getContext('2d');
+        var ctx2 = document.getElementById("chart2").getContext('2d');
+        window.chart1 = new Chart(ctx1, config1);
+        window.chart2 = new Chart(ctx2, config2);
+      }
+      
+      function parse(log) {
+        var entries = [];
+        for (line of log.split('\n')) {
+          // idx,state,press,alt,X,Y,Z,T
+          try {
+            var fields = line.split(',');
+            entries.push({
+              t:     parseInt(fields[0]) * 0.1,
+              state: parseInt(fields[1]),
+              p:     parseInt(fields[2]) * 4,
+              h:     parseInt(fields[3]),
+              mx:    parseInt(fields[4]) / 32768.0,
+              my:    parseInt(fields[5]) / 32768.0,
+              mz:    parseInt(fields[6]) / 32768.0,
+              temp:  parseInt(fields[7])
+            });
+          }
+          catch (e) {
+          }
+        }
+        console.log("Parsed " + entries.length + " entries");
+        return entries;
+      }
+      
+      function find_events(entries) {
+        var foundSteady = false;
+        var foundLiftoff = false;
+        var groundPressure = null;
+        var N = 300;
+        var threshold = 50;
+        
+        for (var i = N; i < entries.length; i++) {
+          var win = entries.slice(i - N, i).map(function(entry) { return entry.p; });
+                    
+          if (!foundSteady) {
+            var min = Math.min.apply(null, win);
+            var max = Math.max.apply(null, win);
+            if ((max - min) < threshold) {
+              groundPressure = win.reduce(function(a, b) { return a + b; }, 0) / win.length;
+              console.log('Pressure stable at ' + i);
+              console.log('Ground pressure average: ' + groundPressure);
+              foundSteady = true;
+            }
+          } 
+          
+          if (foundSteady) {
+            var min = Math.min.apply(null, win.slice(0, N/2));
+            var max = Math.max.apply(null, win.slice(N/2, N));
+            if (max < min) {
+              console.log('Liftoff at ' + (i - N/2));
+              foundLiftoff = true;
+              return {
+                i_liftoff : (i - N/2),
+                p_ground  : groundPressure
+              };
+            }
+          }
+          
+          if (foundLiftoff) {
+            
+          }
+        }
+        return null;
+      }
+      
+      function pressure_altitude(pressure, ground_pressure) {
+        var R =  8.3144;
+        var L = -0.0065;
+        var g =  9.8067;
+        var M = 0.02896;
+        var Tb = 288.15;
+        
+        var p_rel = pressure / ground_pressure;
+        var tmp = Math.pow(p_rel, R * L / g / M)
+
+        return (Tb / tmp - Tb) / L;
+      }
+      
+      function generate_report() {
+        for (dataset of config1.data.datasets) { dataset.data = []; }
+        for (dataset of config2.data.datasets) { dataset.data = []; }
+
+        var input = document.getElementById('input').value;
+        var entries = parse(input);
+        var events = find_events(entries);
+        
+        var t0 = entries[events.i_liftoff].t;
+        var last_time = 0;
+        var last_altitude = 0;
+        var last_velocity = 0;
+        var velocity = 0;
+        var acceleration = 0;
+        for (var i = events.i_liftoff; i < entries.length; i++) {
+          var time = entries[i].t - t0;
+          var pressure = entries[i].p;
+          //var altitude = entries[i].h;
+          var altitude = pressure_altitude(pressure, events.p_ground);          
+    
+          var dt = time - last_time;
+          if (dt > 0) {
+            velocity += 0.25 * ((altitude - last_altitude) / dt - velocity);
+            acceleration += 0.12 * ((velocity - last_velocity) / dt - acceleration);            
+          }
+  
+          config1.data.datasets[0].data.push({x: time, y: altitude});
+          config1.data.datasets[1].data.push({x: time, y: velocity});
+          config1.data.datasets[2].data.push({x: time, y: acceleration});
+
+          config2.data.datasets[0].data.push({x: time, y: entries[i].mx});
+          config2.data.datasets[1].data.push({x: time, y: entries[i].my});
+          config2.data.datasets[2].data.push({x: time, y: entries[i].mz});
+    
+          last_time = time;
+          last_altitude = altitude;
+          last_velocity = velocity;
+        }
+        console.log("Added " + config1.data.datasets[0].data.length + " points");
+        window.chart1.update();
+        window.chart2.update();
+      }
+      
+      document.getElementById('go').addEventListener('click', generate_report);
+    </script>
+  </body>
+</html>
