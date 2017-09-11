@@ -24,7 +24,21 @@
       <textarea id="input" rows="15" class="form-control" style="min-width: 100%"></textarea>
       <button id="go" type="button" class="btn btn-primary">Generate report</button>
 
-      <h3>Report</h3>      
+      <h3>Report</h3>
+      <table class="table table-striped">
+        <tr><td>Max. altitude: </td><td>0</td></tr>
+        <tr><td>Max. speed: </td><td>0</td></tr>
+        <tr><td>Max. acceleration: </td><td>0</td></tr>
+      </table>
+      <table class="table table-striped">
+        <tr><td>Apogee: </td><td>T+0</td></tr>
+        <tr><td>Touchdown: </td><td>T+0</td></tr>
+      </table>
+      <div class="btn-group" data-toggle="buttons">
+        <button id="time-all" type="button" class="btn btn-default" checked>All</button>
+        <button id="time-all" type="button" class="btn btn-default">Liftoff-Apogee</button>
+        <button id="time-all" type="button" class="btn btn-default">Apogee-Touchdown</button>
+      </div>
       <canvas id="chart1" style="min-width: 100%"></canvas>
       <canvas id="chart2" style="min-width: 100%"></canvas>
 
@@ -59,7 +73,7 @@
             backgroundColor: colors.red,
             fill: false,
             pointRadius: 0,
-            data: [{x:-1,y:70}, {x:4,y:30}],
+            data: [],
             yAxisID: "y-alt"
           },
           {
@@ -68,7 +82,7 @@
             backgroundColor: colors.green,
             fill: false,
             pointRadius: 0,
-            data: [{x:0,y:4}, {x:3,y:30}],
+            data: [],
             yAxisID: "y-alt"
           },
           {
@@ -77,7 +91,7 @@
             backgroundColor: colors.blue,
             fill: false,
             pointRadius: 0,
-            data: [{x:-1,y:2}, {x:4,y:-30}],
+            data: [],
             yAxisID: "y-alt"
           }]
         },
@@ -85,7 +99,7 @@
           responsive: true,
           title:{
               display:true,
-              text:'Flight profile (altitude, velocity, acceleration)'
+              text:'Barometric altitude, velocity, acceleration'
           },
           scales: {
             xAxes: [{
@@ -150,7 +164,7 @@
           responsive: true,
           title:{
               display:true,
-              text:'Flight profile (magnetometer data)'
+              text:'Magnetometer data'
           },
           scales: {
             xAxes: [{
@@ -204,45 +218,65 @@
         return entries;
       }
       
+      function mean(x) {
+        return x.reduce(function(a, b) { return a + b; }, 0) / x.length;
+      }
+      
       function find_events(entries) {
         var foundSteady = false;
         var foundLiftoff = false;
+        var foundApogee = false;
+        var foundTouchdown = false;
         var groundPressure = null;
-        var N = 300;
+        var N = 20;
         var threshold = 50;
+        var result = {};
         
-        for (var i = N; i < entries.length; i++) {
-          var win = entries.slice(i - N, i).map(function(entry) { return entry.p; });
+        for (var i = 2*N; i < entries.length; i++) {
+          var win = entries.slice(i - 2*N, i).map(function(entry) { return entry.p; });
                     
           if (!foundSteady) {
             var min = Math.min.apply(null, win);
             var max = Math.max.apply(null, win);
             if ((max - min) < threshold) {
-              groundPressure = win.reduce(function(a, b) { return a + b; }, 0) / win.length;
+              groundPressure = mean(win);
               console.log('Pressure stable at ' + i);
               console.log('Ground pressure average: ' + groundPressure);
               foundSteady = true;
-            }
-          } 
-          
-          if (foundSteady) {
-            var min = Math.min.apply(null, win.slice(0, N/2));
-            var max = Math.max.apply(null, win.slice(N/2, N));
-            if (max < min) {
-              console.log('Liftoff at ' + (i - N/2));
-              foundLiftoff = true;
-              return {
-                i_liftoff : (i - N/2),
-                p_ground  : groundPressure
-              };
+              result.p_ground = groundPressure;
             }
           }
           
-          if (foundLiftoff) {
-            
+          if (foundSteady && !foundLiftoff) {
+            var min = Math.min.apply(null, win.slice(0, N));
+            var max = Math.max.apply(null, win.slice(N, 2*N));
+            if (max < min) {
+              console.log('Liftoff at ' + (i - N));
+              foundLiftoff = true;
+              result.i_liftoff = i - N;
+            }
+          }
+          
+          if (foundLiftoff && !foundApogee) {
+            var min = Math.min.apply(null, win);
+            if (win[N] - min < 1.0) {
+              console.log('Apogee at ' + (i - N));
+              foundApogee = true;
+              result.i_apogee = i - N;
+            }
+          }
+          
+          if (foundApogee && !foundTouchdown && i > result.i_apogee + 2*N) {
+            var max = mean(win.slice(0, N));
+            var min = Math.min.apply(null, win.slice(N, 2*N));
+            if (max > min) {
+              console.log('Touchdown at ' + (i - N));
+              foundTouchdown = true;
+              result.i_touchdown = i - N;
+            }
           }
         }
-        return null;
+        return result;
       }
       
       function pressure_altitude(pressure, ground_pressure) {
@@ -272,7 +306,8 @@
         var last_velocity = 0;
         var velocity = 0;
         var acceleration = 0;
-        for (var i = events.i_liftoff; i < entries.length; i++) {
+        //for (var i = events.i_apogee; i < events.i_touchdown; i++) {
+        for (var i = events.i_liftoff; i < events.i_apogee + 30; i++) {
           var time = entries[i].t - t0;
           var pressure = entries[i].p;
           //var altitude = entries[i].h;
