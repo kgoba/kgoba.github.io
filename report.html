@@ -22,17 +22,17 @@
       <h3>Input data</h3>
       <p>Paste your log here:</p>
       <textarea id="input" rows="15" class="form-control" style="min-width: 100%"></textarea>
-      <button id="go" type="button" class="btn btn-primary">Generate report</button>
+      <!--<button id="go" type="button" class="btn btn-primary">Generate report</button>-->
 
       <h3>Report</h3>
       <table class="table table-striped">
-        <tr><td>Max. altitude: </td><td>0</td></tr>
-        <tr><td>Max. speed: </td><td>0</td></tr>
-        <tr><td>Max. acceleration: </td><td>0</td></tr>
+        <tr><td>Max. altitude: </td><td><span id="max_alt"></span></td></tr>
+        <tr><td>Max. speed: </td><td><span id="max_spd"></span></td></tr>
+        <tr><td>Max. acceleration: </td><td><span id="max_acc"></span></td></tr>
       </table>
       <table class="table table-striped">
-        <tr><td>Apogee: </td><td>T+0</td></tr>
-        <tr><td>Touchdown: </td><td>T+0</td></tr>
+        <tr><td>Apogee: </td><td><span id="t_apogee"></span></td></tr>
+        <tr><td>Touchdown: </td><td><span id="t_touchdown"></span></td></tr>
       </table>
       <div class="btn-group" data-toggle="buttons">
         <button id="time-all" type="button" class="btn btn-default" checked>All</button>
@@ -45,13 +45,11 @@
     </div> <!-- /container -->
   
   
-    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <!--<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>-->
     <script src="js/jquery.min.js"></script>
-    <!-- Include all compiled plugins (below), or include individual files as needed -->
     <script src="js/bootstrap.min.js"></script>
+    <script src="js/Chart.min.js"></script>
     
-    <script src="node_modules/chart.js/dist/Chart.js"></script>
     <script>
       var colors = {
       	red: 'rgb(255, 99, 132)',
@@ -186,13 +184,6 @@
           }
         }
       };
-                
-      window.onload = function() {
-        var ctx1 = document.getElementById("chart1").getContext('2d');
-        var ctx2 = document.getElementById("chart2").getContext('2d');
-        window.chart1 = new Chart(ctx1, config1);
-        window.chart2 = new Chart(ctx2, config2);
-      }
       
       function parse(log) {
         var entries = [];
@@ -295,48 +286,92 @@
       function generate_report() {
         for (dataset of config1.data.datasets) { dataset.data = []; }
         for (dataset of config2.data.datasets) { dataset.data = []; }
-
-        var input = document.getElementById('input').value;
-        var entries = parse(input);
-        var events = find_events(entries);
         
-        var t0 = entries[events.i_liftoff].t;
-        var last_time = 0;
-        var last_altitude = 0;
-        var last_velocity = 0;
-        var velocity = 0;
-        var acceleration = 0;
-        //for (var i = events.i_apogee; i < events.i_touchdown; i++) {
-        for (var i = events.i_liftoff; i < events.i_apogee + 30; i++) {
-          var time = entries[i].t - t0;
-          var pressure = entries[i].p;
-          //var altitude = entries[i].h;
-          var altitude = pressure_altitude(pressure, events.p_ground);          
-    
-          var dt = time - last_time;
-          if (dt > 0) {
-            velocity += 0.25 * ((altitude - last_altitude) / dt - velocity);
-            acceleration += 0.12 * ((velocity - last_velocity) / dt - acceleration);            
-          }
-  
-          config1.data.datasets[0].data.push({x: time, y: altitude});
-          config1.data.datasets[1].data.push({x: time, y: velocity * 10});
-          config1.data.datasets[2].data.push({x: time, y: acceleration * 10});
+        document.getElementById('max_alt').textContent = '';
+        document.getElementById('max_spd').textContent = '';
+        document.getElementById('max_acc').textContent = '';
+        document.getElementById('t_apogee').textContent = '';
+        document.getElementById('t_touchdown').textContent = '';
+       
+        try {
+            var input = document.getElementById('input').value;
+            var entries = parse(input);
+            var events = find_events(entries);
+            
+            var t0 = entries[events.i_liftoff].t;
+            var last_time = 0;
+            var last_altitude = 0;
+            var last_velocity = 0;
+            var velocity = 0;
+            var acceleration = 0;
 
-          config2.data.datasets[0].data.push({x: time, y: entries[i].mx});
-          config2.data.datasets[1].data.push({x: time, y: entries[i].my});
-          config2.data.datasets[2].data.push({x: time, y: entries[i].mz});
-    
-          last_time = time;
-          last_altitude = altitude;
-          last_velocity = velocity;
+            var max_acc = 0;
+            var max_spd = 0;
+            var max_alt = 0;
+            
+            //for (var i = events.i_apogee; i < events.i_touchdown; i++) {
+            for (var i = events.i_liftoff; i < events.i_apogee + 30; i++) {
+              var time = entries[i].t - t0;
+              var pressure = entries[i].p;
+              //var altitude = entries[i].h;
+              var altitude = pressure_altitude(pressure, events.p_ground);          
+        
+              var dt = time - last_time;
+              if (dt > 0) {
+                velocity += 0.25 * ((altitude - last_altitude) / dt - velocity);
+                acceleration += 0.12 * ((velocity - last_velocity) / dt - acceleration);            
+              }
+              
+              if (altitude > max_alt) max_alt = altitude;
+              if (velocity > max_spd) max_spd = velocity;
+              if (acceleration > max_acc) max_acc = acceleration;
+      
+              config1.data.datasets[0].data.push({x: time, y: altitude});
+              config1.data.datasets[1].data.push({x: time, y: velocity * 10});
+              config1.data.datasets[2].data.push({x: time, y: acceleration * 10});
+
+              config2.data.datasets[0].data.push({x: time, y: entries[i].mx});
+              config2.data.datasets[1].data.push({x: time, y: entries[i].my});
+              config2.data.datasets[2].data.push({x: time, y: entries[i].mz});
+        
+              last_time = time;
+              last_altitude = altitude;
+              last_velocity = velocity;
+            }
+
+            document.getElementById('max_alt').textContent = max_alt.toFixed(0) + ' m';
+            document.getElementById('max_spd').textContent = max_spd.toFixed(1) + ' m/s';
+            document.getElementById('max_acc').textContent = max_acc.toFixed(1) + ' m/s2';
+            
+            document.getElementById('t_apogee').textContent = 'T+' + (entries[events.i_apogee].t - t0).toFixed(1) + ' s';
+            document.getElementById('t_touchdown').textContent = 'T+' + (entries[events.i_touchdown].t - t0).toFixed(1) + ' s';
         }
-        console.log("Added " + config1.data.datasets[0].data.length + " points");
-        window.chart1.update();
-        window.chart2.update();
+        finally {
+            console.log("Added " + config1.data.datasets[0].data.length + " points");
+            window.chart1.update();
+            window.chart2.update();
+        }
       }
       
-      document.getElementById('go').addEventListener('click', generate_report);
+                
+      window.onload = function() {
+        var ctx1 = document.getElementById("chart1").getContext('2d');
+        var ctx2 = document.getElementById("chart2").getContext('2d');
+        window.chart1 = new Chart(ctx1, config1);
+        window.chart2 = new Chart(ctx2, config2);
+        generate_report();
+      }
+      
+      //document.getElementById('go').addEventListener('click', generate_report);
+      //document.getElementById('input').addEventListener('paste', function() { alert('paste!'); });
+      
+      window.textChangeTimer = null;
+      document.getElementById('input').addEventListener('input', function() { 
+          clearTimeout(window.textChangeTimer); 
+          window.textChangeTimer = setTimeout(function() { 
+              generate_report();
+          }, 200); 
+      });
     </script>
   </body>
 </html>
