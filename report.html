@@ -34,11 +34,11 @@
         <tr><td>Apogee: </td><td><span id="t_apogee"></span></td></tr>
         <tr><td>Touchdown: </td><td><span id="t_touchdown"></span></td></tr>
       </table>
-      <div class="btn-group" data-toggle="buttons">
-        <button id="time-all" type="button" class="btn btn-default" checked>All</button>
-        <button id="time-all" type="button" class="btn btn-default">Liftoff-Apogee</button>
-        <button id="time-all" type="button" class="btn btn-default">Apogee-Touchdown</button>
+
+      <div class="checkbox">
+          View: <label><input type="checkbox" value="" id="zoom-ascent">Zoom in ascent</label>
       </div>
+
       <canvas id="chart1" style="min-width: 100%"></canvas>
       <canvas id="chart2" style="min-width: 100%"></canvas>
 
@@ -208,7 +208,7 @@
         console.log("Parsed " + entries.length + " entries");
         return entries;
       }
-      
+           
       function mean(x) {
         return x.reduce(function(a, b) { return a + b; }, 0) / x.length;
       }
@@ -270,6 +270,47 @@
         return result;
       }
       
+      function process_data(entries, events) {
+        var t0 = entries[events.i_liftoff].t;
+        var last_time = 0;
+        var last_altitude = 0;
+        var last_velocity = 0;
+        var velocity = 0;
+        var acceleration = 0;
+
+        var max_acc = 0;
+        var max_spd = 0;
+        var max_alt = 0;
+        
+        for (var i = 0; i < entries.length; i++) {
+          var time = entries[i].t - t0;
+          var altitude = pressure_altitude(entries[i].p, events.p_ground);          
+   
+          var dt = time - last_time;
+          if (dt > 0) {
+            velocity += 0.25 * ((altitude - last_altitude) / dt - velocity);
+            acceleration += 0.12 * ((velocity - last_velocity) / dt - acceleration);            
+          }
+          
+          entries[i].t_rel = time;
+          entries[i].h_bar = altitude;
+          entries[i].v = velocity;
+          entries[i].a = acceleration;
+          
+          if (altitude > max_alt) max_alt = altitude;
+          if (velocity > max_spd) max_spd = velocity;
+          if (acceleration > max_acc) max_acc = acceleration;
+
+          last_time = time;
+          last_altitude = altitude;
+          last_velocity = velocity;
+        }
+        
+        events.max_acc = max_acc;
+        events.max_spd = max_spd;
+        events.max_alt = max_alt;
+      }
+      
       function pressure_altitude(pressure, ground_pressure) {
         var R =  8.3144;
         var L = -0.0065;
@@ -284,6 +325,14 @@
       }
       
       function generate_report() {
+            var input = document.getElementById('input').value;
+            window.entries = parse(input);
+            window.events = find_events(entries);
+            
+            process_data(window.entries, window.events);
+      }
+      
+      function draw_report() {
         for (dataset of config1.data.datasets) { dataset.data = []; }
         for (dataset of config2.data.datasets) { dataset.data = []; }
         
@@ -293,58 +342,33 @@
         document.getElementById('t_apogee').textContent = '';
         document.getElementById('t_touchdown').textContent = '';
        
-        try {
-            var input = document.getElementById('input').value;
-            var entries = parse(input);
-            var events = find_events(entries);
+        try {           
+            var events = window.events;
+            var entries = window.entries;
             
-            var t0 = entries[events.i_liftoff].t;
-            var last_time = 0;
-            var last_altitude = 0;
-            var last_velocity = 0;
-            var velocity = 0;
-            var acceleration = 0;
+            var i_from = events.i_liftoff;
+            var i_to = events.i_touchdown;
+            if (document.getElementById('zoom-ascent').checked) {
+                i_to = events.i_apogee + 30;
+            }
 
-            var max_acc = 0;
-            var max_spd = 0;
-            var max_alt = 0;
-            
-            //for (var i = events.i_apogee; i < events.i_touchdown; i++) {
-            for (var i = events.i_liftoff; i < events.i_apogee + 30; i++) {
-              var time = entries[i].t - t0;
-              var pressure = entries[i].p;
-              //var altitude = entries[i].h;
-              var altitude = pressure_altitude(pressure, events.p_ground);          
-        
-              var dt = time - last_time;
-              if (dt > 0) {
-                velocity += 0.25 * ((altitude - last_altitude) / dt - velocity);
-                acceleration += 0.12 * ((velocity - last_velocity) / dt - acceleration);            
-              }
-              
-              if (altitude > max_alt) max_alt = altitude;
-              if (velocity > max_spd) max_spd = velocity;
-              if (acceleration > max_acc) max_acc = acceleration;
-      
-              config1.data.datasets[0].data.push({x: time, y: altitude});
-              config1.data.datasets[1].data.push({x: time, y: velocity * 10});
-              config1.data.datasets[2].data.push({x: time, y: acceleration * 10});
+            for (var i = i_from; i < i_to; i++) {
+              time = entries[i].t_rel;
+              config1.data.datasets[0].data.push({x: time, y: entries[i].h_bar});
+              config1.data.datasets[1].data.push({x: time, y: entries[i].v * 10});
+              config1.data.datasets[2].data.push({x: time, y: entries[i].a * 10});
 
               config2.data.datasets[0].data.push({x: time, y: entries[i].mx});
               config2.data.datasets[1].data.push({x: time, y: entries[i].my});
               config2.data.datasets[2].data.push({x: time, y: entries[i].mz});
-        
-              last_time = time;
-              last_altitude = altitude;
-              last_velocity = velocity;
             }
 
-            document.getElementById('max_alt').textContent = max_alt.toFixed(0) + ' m';
-            document.getElementById('max_spd').textContent = max_spd.toFixed(1) + ' m/s';
-            document.getElementById('max_acc').textContent = max_acc.toFixed(1) + ' m/s2';
+            document.getElementById('max_alt').textContent = events.max_alt.toFixed(0) + ' m';
+            document.getElementById('max_spd').textContent = events.max_spd.toFixed(1) + ' m/s';
+            document.getElementById('max_acc').textContent = events.max_acc.toFixed(1) + ' m/s2';
             
-            document.getElementById('t_apogee').textContent = 'T+' + (entries[events.i_apogee].t - t0).toFixed(1) + ' s';
-            document.getElementById('t_touchdown').textContent = 'T+' + (entries[events.i_touchdown].t - t0).toFixed(1) + ' s';
+            document.getElementById('t_apogee').textContent = 'T+' + entries[events.i_apogee].t_rel.toFixed(1) + ' s';
+            document.getElementById('t_touchdown').textContent = 'T+' + entries[events.i_touchdown].t_rel.toFixed(1) + ' s';
         }
         finally {
             console.log("Added " + config1.data.datasets[0].data.length + " points");
@@ -353,15 +377,16 @@
         }
       }
       
-                
       window.onload = function() {
         var ctx1 = document.getElementById("chart1").getContext('2d');
         var ctx2 = document.getElementById("chart2").getContext('2d');
         window.chart1 = new Chart(ctx1, config1);
         window.chart2 = new Chart(ctx2, config2);
         generate_report();
+        draw_report();
       }
       
+      document.getElementById('zoom-ascent').addEventListener('change', draw_report);
       //document.getElementById('go').addEventListener('click', generate_report);
       //document.getElementById('input').addEventListener('paste', function() { alert('paste!'); });
       
@@ -370,6 +395,7 @@
           clearTimeout(window.textChangeTimer); 
           window.textChangeTimer = setTimeout(function() { 
               generate_report();
+              draw_report();
           }, 200); 
       });
     </script>
