@@ -75,7 +75,7 @@
             yAxisID: "y-alt"
           },
           {
-            label: "Vertical velocity",
+            label: "Vertical velocity (x10 m/s)",
             borderColor: colors.green,
             backgroundColor: colors.green,
             fill: false,
@@ -84,7 +84,7 @@
             yAxisID: "y-alt"
           },
           {
-            label: "Vertical acceleration",
+            label: "Vertical acceleration (x10 m/s2)",
             borderColor: colors.blue,
             backgroundColor: colors.blue,
             fill: false,
@@ -111,7 +111,7 @@
             yAxes: [{
               scaleLabel: {
   							display: true,
-                labelString: 'Altitude, m',
+                labelString: 'Altitude, m / Velocity x10, m/s / Acceleration x10, m/s2',
   						},
               type: 'linear',
               position: 'left',
@@ -171,7 +171,7 @@
                 labelString: 'Time since liftoff, s',
   						},
               type: 'linear',
-              position: 'bottom'
+              position: 'bottom'             
             }],
             yAxes: [{
               scaleLabel: {
@@ -190,7 +190,8 @@
         for (line of log.split('\n')) {
           // idx,state,press,alt,X,Y,Z,T
           try {
-            var fields = line.split(',');
+            var fields = line.trim().split(',');
+            if (fields.length < 8) continue;
             entries.push({
               t:     parseInt(fields[0]) * 0.1,
               state: parseInt(fields[1]),
@@ -218,10 +219,11 @@
         var foundLiftoff = false;
         var foundApogee = false;
         var foundTouchdown = false;
-        var groundPressure = null;
         var N = 20;
         var threshold = 50;
         var result = {};
+        
+        result.i_liftoff = 0;
         
         for (var i = 2*N; i < entries.length; i++) {
           var win = entries.slice(i - 2*N, i).map(function(entry) { return entry.p; });
@@ -230,11 +232,8 @@
             var min = Math.min.apply(null, win);
             var max = Math.max.apply(null, win);
             if ((max - min) < threshold) {
-              groundPressure = mean(win);
-              console.log('Pressure stable at ' + i);
-              console.log('Ground pressure average: ' + groundPressure);
               foundSteady = true;
-              result.p_ground = groundPressure;
+              result.p_ground = mean(win);
             }
           }
           
@@ -242,7 +241,6 @@
             var min = Math.min.apply(null, win.slice(0, N));
             var max = Math.max.apply(null, win.slice(N, 2*N));
             if (max < min) {
-              console.log('Liftoff at ' + (i - N));
               foundLiftoff = true;
               result.i_liftoff = i - N;
             }
@@ -251,7 +249,6 @@
           if (foundLiftoff && !foundApogee) {
             var min = Math.min.apply(null, win);
             if (win[N] - min < 1.0) {
-              console.log('Apogee at ' + (i - N));
               foundApogee = true;
               result.i_apogee = i - N;
             }
@@ -261,7 +258,6 @@
             var max = mean(win.slice(0, N));
             var min = Math.min.apply(null, win.slice(N, 2*N));
             if (max > min) {
-              console.log('Touchdown at ' + (i - N));
               foundTouchdown = true;
               result.i_touchdown = i - N;
             }
@@ -281,6 +277,8 @@
         var max_acc = 0;
         var max_spd = 0;
         var max_alt = 0;
+        var k_a = 0;
+        var k_v = 0;
         
         for (var i = 0; i < entries.length; i++) {
           var time = entries[i].t - t0;
@@ -288,8 +286,14 @@
    
           var dt = time - last_time;
           if (dt > 0) {
-            velocity += 0.25 * ((altitude - last_altitude) / dt - velocity);
-            acceleration += 0.12 * ((velocity - last_velocity) / dt - acceleration);            
+            if (i < events.i_apogee) {
+                k_a = 0.15; k_v = 0.25;
+            }
+            else {
+                k_a = 0.05; k_v = 0.15;
+            }
+            velocity += k_v * ((altitude - last_altitude) / dt - velocity);
+            acceleration += k_a * ((velocity - last_velocity) / dt - acceleration);            
           }
           
           entries[i].t_rel = time;
@@ -325,11 +329,18 @@
       }
       
       function generate_report() {
+          window.entries = null;
+          window.events = null;
+          
+          try {
             var input = document.getElementById('input').value;
             window.entries = parse(input);
             window.events = find_events(entries);
             
             process_data(window.entries, window.events);
+          }
+          catch (e) {
+          }
       }
       
       function draw_report() {
@@ -369,6 +380,8 @@
             
             document.getElementById('t_apogee').textContent = 'T+' + entries[events.i_apogee].t_rel.toFixed(1) + ' s';
             document.getElementById('t_touchdown').textContent = 'T+' + entries[events.i_touchdown].t_rel.toFixed(1) + ' s';
+        }
+        catch (e) {
         }
         finally {
             console.log("Added " + config1.data.datasets[0].data.length + " points");
