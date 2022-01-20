@@ -1,0 +1,12 @@
+body {
+    font-family: Arial;
+    padding: 20px 15% 20px 15%;
+    background: #f8f8f0;
+}
+
+.center {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    border: solid 1px;
+}

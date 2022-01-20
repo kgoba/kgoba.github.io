@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <title>title</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/simple.css">
     <!-- <script src="script.js"></script> -->
   </head>
   <body>
@@ -26,7 +26,7 @@
         Just make sure to specify the working frequency of the MCF.</p>
 
     <p>For example, the datasheet says termination load 1000 ohm || 5 pF. Thus an ideally terminated MCF would look so:</p>
-    <img src="png/mcf_1.png"/>
+    <img src="png/mcf_1.png" class="center"/>
 
     <p>At 45 MHz this means a 1000 ohm resistance in parallel with a -1j/(2pi*45MHz*5pF) = -707j ohm reactance. 
     Using parallel circuit formula Z = Z_1*Z_2 / (Z_1+Z_2), the termination impedance is Z = 1000*(-707j)/(1000-707j) = 333 - 471j.</p>
@@ -41,7 +41,7 @@
     </p>
 
     <p>This means our example can be represented like this:</p>    
-    <img src="png/mcf_2.png"/>
+    <img src="png/mcf_2.png" class="center"/>
 
     <h2>Matching network design</h2>
 
@@ -55,17 +55,7 @@
         To match this with a 50 ohm signal source, we can use a matching network designer with source impedance of 50 ohms and load impedance of 333+471j ohms. 
         If our expected load is also 50 ohms, we can reuse the same matching network in reverse (symmetric to input).
         Here we choose a simple first order lowpass matching network since for most cases lowpass behaviour is the better option:</p>
-    <img src="png/mcf_3.png"/>
-
-    <h2>Higher order MCFs</h2>
-
-    <p>Typically a single MCF is a second order filter. However, two MCFs can be chained together to obtain a fourth order filter with steeper bandpass response. 
-        Sometimes MCFs are sold in pairs of two with the intention to combine them into a fourth order MCF.
-        The output of one MCF can be connected to the input of another MCF with a small coupling capacitor to the ground. The value of this capacitor is specified in the datasheet.</p>
-    <img src="png/mcf_5.png"/>
-
-    <p>The nice news is that the input/output impedance of such combined filter will still be the same as in the original case, so the same calculations apply.
-        The chain can be continued for more identical MCFs the same way.</p>
+    <img src="png/mcf_3.png" class="center"/>
 
     <h2>Direct connection to amplifiers</h2>
 
@@ -75,7 +65,7 @@
 
     </p>
     
-    <img src="png/mcf_4.png"/>
+    <img src="png/mcf_4.png" class="center"/>
 
     <p>
         <ul>
@@ -84,6 +74,16 @@
         </ul>
         Here L1 is an RF choke with a very high impedance at working frequency.
     </p>
+
+    <h2>Higher order MCFs</h2>
+
+    <p>Typically a single MCF is a second order filter. However, two MCFs can be chained together to obtain a fourth order filter with steeper bandpass response. 
+        Sometimes MCFs are sold in pairs of two with the intention to combine them into a fourth order MCF.
+        The output of one MCF can be connected to the input of another MCF with a small coupling capacitor to the ground. The value of this capacitor is specified in the datasheet.</p>
+    <img src="png/mcf_5.png" class="center"/>
+
+    <p>The nice news is that the input/output impedance of such combined filter will still be the same as in the original case, so the same calculations apply.
+        The chain can be continued for more identical MCFs the same way.</p>
 
   </body>
 </html>
