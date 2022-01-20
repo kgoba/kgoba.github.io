@@ -43,18 +43,24 @@
     <p>This means our example can be represented like this:</p>    
     <img src="png/mcf_2.png" class="center"/>
 
+    <p>Our signal source has a source impedance of 333-471j ohms, which means that the input impedance of our MCF is 333+471j - note the change of sign in reactance (this follows from matching theorem). 
+        The same applies to the output of our MCF, the output impedance is 333+471j (as seen from the load, that is, considering the output of the MCF as signal source itself).</p>
+
     <h2>Matching network design</h2>
 
-    <p><a href="https://home.sandiego.edu/~ekim/e194rfs01/jwmatcher/matcher2.html">LC matching network designer</a></p>
+    <p>To match the MCF to a different source or load impedance, a matching network is required.
+        Matching can be achieved with resistors, however, this way there will be a power loss and increased noise.
+        A lossless match (theoretically) can be achieved by a network consisting of inductors and capacitors.
+        There are several topologies that also provide a lowpass, highpass or even bandpass filtering effect; for examples, see <a href="https://home.sandiego.edu/~ekim/e194rfs01/jwmatcher/matcher2.html">LC matching network designer</a>.
+    </p>
 
     <p>The devil is in the details. The specified termination load (and thus the impedance that MCF presents to our matching network) refers only to the passband. 
         Outside the passband, impedance can change very wildly. 
         The matching network will transform it to some other impedance, and here the choice of one or another matching network might make a difference.</p>
 
-    <p>To continue our example, our signal source has now 333-471j ohms source impedance, which means that the input impedance of our MCF is 333+471j - note the change of sign in reactance (this follows from matching theorem).
-        To match this with a 50 ohm signal source, we can use a matching network designer with source impedance of 50 ohms and load impedance of 333+471j ohms. 
+    <p>To match our example MCF with a 50 ohm signal source, we can use a matching network designer with source impedance of 50 ohms and load impedance of 333+471j ohms. 
         If our expected load is also 50 ohms, we can reuse the same matching network in reverse (symmetric to input).
-        Here we choose a simple first order lowpass matching network since for most cases lowpass behaviour is the better option:</p>
+        Here we choose a simple lowpass matching network since for most cases lowpass behaviour is the better option:</p>
     <img src="png/mcf_3.png" class="center"/>
 
     <h2>Direct connection to amplifiers</h2>
@@ -75,7 +81,9 @@
         Here L1 is an RF choke with a very high impedance at working frequency.
     </p>
 
-    <h2>Higher order MCFs</h2>
+    <p>Note that this way there might be some power lost due to using resistive elements to define input/output impedance.</p>
+
+    <h2>Chaining MCFs</h2>
 
     <p>Typically a single MCF is a second order filter. However, two MCFs can be chained together to obtain a fourth order filter with steeper bandpass response. 
         Sometimes MCFs are sold in pairs of two with the intention to combine them into a fourth order MCF.
