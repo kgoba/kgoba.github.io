@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>title</title>
+    <link rel="stylesheet" href="css/simple.css">
+    <!-- <script src="script.js"></script> -->
+  </head>
+
+  <body>
+    <div>
+      <svg width="300" height="200" class="center">
+        <g transform="translate(120 100) scale(1.5)">
+          <!-- Draw the elements -->
+          <g stroke="black" stroke-width="2" fill="black">
+            <path d="M0 0 h60" stroke="red" stroke-width="1"/>
+            <path d="M0 0 m0 -50 v100"/>
+            <path d="M30 0 m0 -40 v80"/>
+            <path d="M60 0 m0 -30 v60"/>
+          </g>
+          <!-- Label the lengths -->
+          <g font-size="12" font-family="sans-serif" fill="black" stroke="none" text-anchor="start">
+            <text transform="translate(4 4) rotate(90)">362</text>
+            <text transform="translate(34 4) rotate(90)">342</text>
+            <text transform="translate(64 4) rotate(90)">312</text>
+            <text transform="translate(4 -4)">162</text>
+            <text transform="translate(34 -4)">128</text>
+          </g>
+        </g>
+      </svg>
+      <p style="text-align: center">3 element Yagi for 403 MHz (+6.5 dBd)</p>
+    </div>
+
+    <div>
+      <svg width="300" height="200" class="center">
+        <g transform="translate(60 100) scale(1.5)">
+          <!-- Draw the elements -->
+          <g stroke="black" stroke-width="2" fill="black">
+            <path d="M0 0 h120" stroke="red" stroke-width="1"/>
+            <path d="M0 0 m0 -50 v100"/>
+            <path d="M30 0 m0 -40 v80"/>
+            <path d="M60 0 m0 -30 v60"/>
+            <path d="M90 0 m0 -25 v50"/>
+            <path d="M120 0 m0 -20 v40"/>
+          </g>
+          <!-- Label the lengths -->
+          <g font-size="12" font-family="sans-serif" fill="black" stroke="none" text-anchor="start">
+            <text transform="translate(4 4) rotate(90)">358</text>
+            <text transform="translate(34 4) rotate(90)">354</text>
+            <text transform="translate(64 4) rotate(90)">330</text>
+            <text transform="translate(94 4) rotate(90)">304</text>
+            <text transform="translate(124 4) rotate(90)">282</text>
+            <text transform="translate(4 -4)">238</text>
+            <text transform="translate(34 -4)">80</text>
+            <text transform="translate(64 -4)">160</text>
+            <text transform="translate(94 -4)">186</text>
+          </g>
+        </g>
+      </svg>
+      <p style="text-align: center">5 element Yagi for 403 MHz (+8 dBd)</p>
+    </div>
+  </body>
+</html>
