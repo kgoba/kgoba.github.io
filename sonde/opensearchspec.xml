@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/" xmlns:moz="http://www.mozilla.org/2006/browser/search/">
+ <ShortName>SondeHub Tracker</ShortName>
+ <Description>SondeHub Tracker - Search</Description>
+ <InputEncoding>UTF-8</InputEncoding>
+ <Contact>hello@rgp.io</Contact>
+ <Image height="16" width="16" type="image/x-icon">https://sondehub.org/favicon.ico</Image>
+ <Developer>Luke Prior</Developer>
+ <Url type="text/html" method="get" template="https://sondehub.org/#!f={searchTerms}&amp;mz=9&amp;qm=All&amp;q={searchTerms}" />
+</OpenSearchDescription>
