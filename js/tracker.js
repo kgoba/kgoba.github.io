@@ -85,7 +85,7 @@ const styles = {
   }),
 };
 
-fetch('http://api.v2.sondehub.org/listeners/telemetry').then(function (response) {
+fetch('https://api.v2.sondehub.org/listeners/telemetry').then(function (response) {
   response.json().then(function (result) {
     var markerList = [];
 
@@ -120,7 +120,7 @@ fetch('http://api.v2.sondehub.org/listeners/telemetry').then(function (response)
   })
 });
 
-fetch('http://api.v2.sondehub.org/sites').then(function (response) {
+fetch('https://api.v2.sondehub.org/sites').then(function (response) {
   response.json().then(function (result) {
     var markerList = [];
 
@@ -164,7 +164,7 @@ map.addLayer(new ol.layer.Vector({
   })
 );
 
-fetch('http://api.v2.sondehub.org/sondes?lat=57.00&lon=24.00&distance=1600000&last=21600').then(function (response) {
+fetch('https://api.v2.sondehub.org/sondes?lat=57.00&lon=24.00&distance=1600000&last=21600').then(function (response) {
   response.json().then(function (result) {
 
     for (const key in result) {
@@ -185,7 +185,7 @@ fetch('http://api.v2.sondehub.org/sondes?lat=57.00&lon=24.00&distance=1600000&la
     console.log('Loaded ' + sondeList.size + ' sondes');
 
     for (const key in sondeList) {
-      fetch('http://api.v2.sondehub.org/sonde/' + key).then(function (response) {
+      fetch('https://api.v2.sondehub.org/sonde/' + key).then(function (response) {
         response.json().then(function (result) {
           var polyline = [];
           for (var index = 0; index < result.length; index++) {
