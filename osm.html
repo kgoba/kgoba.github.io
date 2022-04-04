@@ -18,5 +18,135 @@
   <body>
     <div id="map" class="map"></div>
     <script src="js/tracker.js" type="text/javascript"></script>
+    <script type="text/javascript">
+      const mapCenter = [24.00, 57.00];
+
+      function inRange(point) {
+        return ol.sphere.getDistance(mapCenter, point) < 500000;
+        // return (Math.abs(point[0] - mapCenter[0]) < 20) && (Math.abs(point[1] - mapCenter[1]) < 14);
+      }
+
+      function createMap() {
+        const defaultMap = new ol.layer.Tile({
+          source: new ol.source.OSM()
+        });
+        const topoMap = new ol.layer.Tile({
+          source: new ol.source.OSM({
+            url: 'https://{a-c}.tile.opentopomap.org/{z}/{x}/{y}.png',
+          })
+        });
+        const satMap = new ol.layer.Tile({
+          source: new ol.source.XYZ({
+            url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            maxZoom: 19
+          })
+        });
+        const outdoorMap = new ol.layer.Tile({
+          source: new ol.source.XYZ({
+            url: 'https://api.mapbox.com/styles/v1/mapbox/outdoors-v11/tiles/{z}/{x}/{y}?access_token=pk.eyJ1Ijoia2FybGlzZ28iLCJhIjoiY2wxa251aHg3MDJtZjNwbzZ5bXhieDAxOSJ9.CMjr3LPyI_fWDrR07tJe5Q',
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+            maxZoom: 19,
+            tileSize: [512, 512],
+          })
+        });
+
+
+        const map = new ol.Map({
+          target: 'map',
+          layers: [
+            defaultMap,
+            // topoMap,
+            // satMap,
+            // outdoorMap,
+          ],
+          view: new ol.View({
+            center: ol.proj.fromLonLat(mapCenter),
+            zoom: 6,
+            minZoom: 0,
+            maxZoom: 16
+          })
+        });
+
+        window.map = map;
+      }
+
+      const styles = {
+        'listener': new ol.style.Style({
+          image: new ol.style.Circle({
+            radius: 6,
+            fill: new ol.style.Fill({color: 'green'}),
+            stroke: new ol.style.Stroke({
+              color: 'gray',
+              width: 1,
+            }),
+          }),
+        }),
+        'launchSite': new ol.style.Style({
+          image: new ol.style.Circle({
+            radius: 7,
+            // fill: new ol.style.Fill({color: 'black'}),
+            stroke: new ol.style.Stroke({
+              color: 'black',
+              width: 3,
+            }),
+          }),
+        }),
+        'sonde': new ol.style.Style({
+          image: new ol.style.Circle({
+            radius: 6,
+            fill: new ol.style.Fill({color: 'gray'}),
+            stroke: new ol.style.Stroke({
+              color: 'black',
+              width: 1,
+            }),
+          }),
+        }),
+        'liveSonde': new ol.style.Style({
+          image: new ol.style.Circle({
+            radius: 6,
+            fill: new ol.style.Fill({color: 'red'}),
+            stroke: new ol.style.Stroke({
+              color: 'gray',
+              width: 1,
+            }),
+          }),
+        }),
+        'route': new ol.style.Style({
+          stroke: new ol.style.Stroke({
+            width: 4,
+            // color: [250, 180, 50, 0.8],
+            color: 'red',
+          }),
+        }),
+      };
+
+      createMap();
+
+      let markerSource = new ol.source.Vector({});
+      window.map.addLayer(new ol.layer.Vector({
+          source: markerSource,
+          style: function (feature) {
+            return styles[feature.get('type')];
+          },
+        })
+      );
+
+      fetchListeners(function(name, lon, lat) {
+        let marker = new ol.Feature({
+              type: 'listener',
+              geometry: new ol.geom.Point(ol.proj.fromLonLat([lon, lat])),
+            });
+        markerSource.addFeature(marker);
+      });
+
+      fetchSites(function(name, lon, lat) {
+        let marker = new ol.Feature({
+              type: 'launchSite',
+              geometry: new ol.geom.Point(ol.proj.fromLonLat([lon, lat])),
+            });
+        markerSource.addFeature(marker);
+      });
+
+    </script>
   </body>
 </html>
