@@ -41,19 +41,10 @@ function fetchSites(addSite) {
   });
 }
 
-function fetchSondes() {
+function fetchSondes(addSonde, addPath) {
   let sondeList = {};
-  let markerSource = new ol.source.Vector({});
 
-  map.addLayer(new ol.layer.Vector({
-      source: markerSource,
-      style: function (feature) {
-        return styles[feature.get('type')];
-      },
-    })
-  );
-
-  fetch('https://api.v2.sondehub.org/sondes?lat=57.00&lon=24.00&distance=1600000&last=21600').then(function (response) {
+  fetch('https://api.v2.sondehub.org/sondes?lat=57.00&lon=24.00&distance=500000&last=86400').then(function (response) {
     response.json().then(function (result) {
 
       for (const key in result) {
@@ -62,12 +53,9 @@ function fetchSondes() {
         const lon = entry['lon'];
         if (inRange([lon, lat])) {
           const frameID = entry['frame'];
-          console.log(`${key}: ${lat} ${lon}`);
-          let marker = new ol.Feature({
-            type: 'sonde',
-            geometry: new ol.geom.Point(ol.proj.fromLonLat([lon, lat])),
-          });
-          markerSource.addFeature(marker);
+          const serial = entry['serial'];
+          console.log('Adding ' + serial);
+          let marker = addSonde(serial, lon, lat);
           sondeList[key] = { 'marker' : marker, 'frame': frameID };
         }
       }
@@ -79,28 +67,25 @@ function fetchSondes() {
             let polyline = [];
             for (let index = 0; index < result.length; index++) {
               const entry = result[index];
-              const lat = entry['lat'];
-              const lon = entry['lon'];
+              const point = { lat: entry['lat'], lon: entry['lon']};
               if (index % 5 == 0)
-                polyline.push(ol.proj.fromLonLat([lon, lat]));
+                polyline.push(point);
             }
             console.log('Loaded ' + polyline.length + ' path points for sonde ' + key);
 
-            let path = new ol.Feature({
-              type: 'route',
-              geometry: new ol.geom.LineString(polyline),
-            });
-            markerSource.addFeature(path);
+            let path = addPath(polyline);
             sondeList[key].path = path;
           })
         });
         setTimeout(function(){}, 500);
       }
+
+      startLiveTracker(sondeList);
     })
   });
 }
 
-function updateSonde(frame) {
+function updateSonde(sondeList, frame) {
   if ('serial' in frame) {
     const sondeID = frame['serial'];
     const lat = frame['lat'];
@@ -113,13 +98,13 @@ function updateSonde(frame) {
         try {
           sondeList[sondeID]['frame'] = frameID;
           let marker = sondeList[sondeID]['marker'];
-          marker.getGeometry().setCoordinates(ol.proj.fromLonLat([lon, lat]));
-          // marker.type = 'liveSonde';
-          marker.setStyle(styles['liveSonde']);
-          if (sondeList[sondeID].hasOwnProperty('path')) {
-            let path = sondeList[sondeID]['path'];
-            path.getGeometry().appendCoordinate(ol.proj.fromLonLat([lon, lat]));
-          }
+          // marker.getGeometry().setCoordinates(ol.proj.fromLonLat([lon, lat]));
+          // // marker.type = 'liveSonde';
+          // marker.setStyle(styles['liveSonde']);
+          // if (sondeList[sondeID].hasOwnProperty('path')) {
+          //   let path = sondeList[sondeID]['path'];
+          //   path.getGeometry().appendCoordinate(ol.proj.fromLonLat([lon, lat]));
+          // }
         }
         catch (error) {
           console.log('Error while updating sonde data: ' + error);
@@ -132,24 +117,24 @@ function updateSonde(frame) {
     else {
       if (inRange([lon, lat])) {
         console.log('Live: Found new sonde ' + sondeID + ' in range');
-        let marker = new ol.Feature({
-          type: 'sonde',
-          geometry: new ol.geom.Point(ol.proj.fromLonLat([lon, lat])),
-        });
-        let polyline = [ol.proj.fromLonLat([lon, lat])];
-        let path = new ol.Feature({
-            type: 'route',
-            geometry: new ol.geom.LineString(polyline),
-          });
-        sondeList[sondeID] = { 'marker': marker, 'frame': frameID, 'path': path };
-        markerSource.addFeature(marker);
-        markerSource.addFeature(path);
+        // let marker = new ol.Feature({
+        //   type: 'sonde',
+        //   geometry: new ol.geom.Point(ol.proj.fromLonLat([lon, lat])),
+        // });
+        // let polyline = [ol.proj.fromLonLat([lon, lat])];
+        // let path = new ol.Feature({
+        //     type: 'route',
+        //     geometry: new ol.geom.LineString(polyline),
+        //   });
+        // sondeList[sondeID] = { 'marker': marker, 'frame': frameID, 'path': path };
+        // markerSource.addFeature(marker);
+        // markerSource.addFeature(path);
       }
     }
   }
 }
 
-function startLiveTracker() {
+function startLiveTracker(sondeList) {
   const livedata_url = "wss://ws-reader.v2.sondehub.org/";
   const clientID = "SondeHub-Tracker-" + Math.floor(Math.random() * 10000000000);
   let client = new Paho.MQTT.Client(livedata_url, clientID);
@@ -174,10 +159,10 @@ function startLiveTracker() {
   function onMessageArrived(message) {
     const frame = JSON.parse(message.payloadString.toString());
     if (frame.length == null) {
-      updateSonde(frame);
+      updateSonde(sondeList, frame);
     } else {
       for (let i = 0; i < frame.length; i++) {
-        updateSonde(frame[i]);
+        updateSonde(sondeList, frame[i]);
       }
     }
   }

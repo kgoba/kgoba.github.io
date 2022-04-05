@@ -10,6 +10,7 @@
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
+    <script src="js/paho-mqtt-min.js" type="text/javascript"></script>
 
 	<style>
 		html, body {
@@ -90,7 +91,7 @@
 
         fetchListeners(function(name, lon, lat) {
             let marker = L.circleMarker([lat, lon], { radius: 6, fillColor: '#008000', fillOpacity: 0.6, color: '#000000', weight: 1 });
-            console.log('Listener ' + name);
+            // console.log('Listener ' + name);
             marker.bindTooltip(name);
             marker.addTo(map);
         });
@@ -99,6 +100,18 @@
             let marker = L.circleMarker([lat, lon], { radius: 7, fill: false, color: '#000000', weight: 3 });
             marker.bindTooltip(name);
             marker.addTo(map);
+        });
+
+        fetchSondes(function(name, lon, lat) {
+            let marker = L.circleMarker([lat, lon], { radius: 6, fillColor: '#FF2020', fillOpacity: 0.6, color: '#000000', weight: 1 });
+            console.log('Sonde ' + name);
+            marker.bindTooltip(name);
+            marker.addTo(map);
+            return marker;
+        }, function(pointList) {
+            let path = L.polyline(pointList.map(x => [x.lat, x.lon]), {color: 'red'})
+            path.addTo(map);
+            return path;
         });
 
         // var m1 = L.circleMarker([57.00, 24.00], { radius: 7, fill: false, color: '#000000', weight: 3 });
