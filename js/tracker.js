@@ -1,23 +1,22 @@
 function fetchListeners(addListener) {
-  fetch('https://api.v2.sondehub.org/listeners/telemetry').then(function (response) {
-    response.json().then(function (result) {
+  fetch('https://api.v2.sondehub.org/listeners/telemetry')
+    .then(response => response.json())
+    .then(function (result) {
       let numAdded = 0;
       for (const key in result) {
         const subkey = Object.keys(result[key])[0];
         const entry = result[key][subkey];
         const callsign = entry['uploader_callsign'];
         if ('uploader_position' in entry) {
-          const lat = entry['uploader_position'][0];
-          const lon = entry['uploader_position'][1];
-          if (inRange([lon, lat])) {
-            addListener(callsign, lon, lat);
+          const loc = { lat: entry['uploader_position'][0], lon: entry['uploader_position'][1] };
+          if (inRange(loc)) {
+            addListener(callsign, loc);
             numAdded++;
           }
         }
       }
       console.log('Added ' + numAdded + ' listeners')
-    })
-  });
+    });
 }
 
 function fetchSites(addSite) {
@@ -27,11 +26,10 @@ function fetchSites(addSite) {
       for (const key in result) {
         const entry = result[key];
         if ('position' in entry) {
-          const lat = entry['position'][1];
-          const lon = entry['position'][0];
+          const loc = { lat: entry['position'][1], lon: entry['position'][0] };
           const name = entry['station_name'];
-          if (inRange([lon, lat])) {
-            addSite(name, lon, lat);
+          if (inRange(loc)) {
+            addSite(name, loc);
             numAdded++;
           }
         }
@@ -41,22 +39,21 @@ function fetchSites(addSite) {
   });
 }
 
-function fetchSondes(addSonde, addPath) {
+function fetchSondes(ui, mapRadiusKm) {
   let sondeList = {};
 
-  fetch('https://api.v2.sondehub.org/sondes?lat=57.00&lon=24.00&distance=500000&last=86400').then(function (response) {
+  fetch('https://api.v2.sondehub.org/sondes?lat=57.00&lon=24.00&last=86400&distance=' + (1000*mapRadiusKm)).then(function (response) {
     response.json().then(function (result) {
 
       for (const key in result) {
         const entry = result[key];
-        const lat = entry['lat'];
-        const lon = entry['lon'];
-        if (inRange([lon, lat])) {
-          const frameID = entry['frame'];
+        const loc = { lat: entry['lat'], lon: entry['lon'] };
+        if (inRange(loc)) {
           const serial = entry['serial'];
-          console.log('Adding ' + serial);
-          let marker = addSonde(serial, lon, lat);
-          sondeList[key] = { 'marker' : marker, 'frame': frameID };
+          const frameID = entry['frame'];
+          const data = { serial: serial, frame: frameID, loc: loc };
+          let marker = ui.addSonde(data);
+          sondeList[key] = { marker: marker, data: data };
         }
       }
       console.log('Loaded ' + sondeList.size + ' sondes');
@@ -67,37 +64,41 @@ function fetchSondes(addSonde, addPath) {
             let polyline = [];
             for (let index = 0; index < result.length; index++) {
               const entry = result[index];
-              const point = { lat: entry['lat'], lon: entry['lon']};
+              const point = { lat: entry['lat'], lon: entry['lon'] };
               if (index % 5 == 0)
                 polyline.push(point);
             }
             console.log('Loaded ' + polyline.length + ' path points for sonde ' + key);
 
-            let path = addPath(polyline);
+            let path = ui.addPath(polyline);
             sondeList[key].path = path;
           })
         });
         setTimeout(function(){}, 500);
       }
 
-      startLiveTracker(sondeList);
+      startLiveTracker(sondeList, ui);
     })
   });
 }
 
-function updateSonde(sondeList, frame) {
+function decodeFrame(sondeList, frame, ui) {
   if ('serial' in frame) {
-    const sondeID = frame['serial'];
-    const lat = frame['lat'];
-    const lon = frame['lon'];
-    const alt = frame['alt'];
-    const frameID = frame['frame'];
+    const sondeID = frame.serial;
+    const loc = { lat: frame.lat, lon: frame.lon, alt: frame.alt };
+    const frameID = frame.frame;
     if (sondeList.hasOwnProperty(sondeID)) {
-      if (frameID > sondeList[sondeID]['frame']) {
-        console.log('Live: Update to sonde ' + sondeID + ' alt: ' + alt);
+      if (frameID > sondeList[sondeID].data.frame) {
+        console.log('Live: Update to sonde ' + sondeID + ' alt: ' + loc.alt);
         try {
-          sondeList[sondeID]['frame'] = frameID;
-          let marker = sondeList[sondeID]['marker'];
+          sondeList[sondeID].data.frame = frameID;
+          sondeList[sondeID].data.loc = loc;
+          sondeList[sondeID].data.vel_v = frame.vel_v;
+          sondeList[sondeID].data.vel_h = frame.vel_h;
+          let marker = sondeList[sondeID].marker;
+          let path = sondeList[sondeID].path;
+          ui.updateSonde(marker, sondeList[sondeID].data);
+          ui.updatePath(path, loc);
           // marker.getGeometry().setCoordinates(ol.proj.fromLonLat([lon, lat]));
           // // marker.type = 'liveSonde';
           // marker.setStyle(styles['liveSonde']);
@@ -115,7 +116,7 @@ function updateSonde(sondeList, frame) {
       }
     }
     else {
-      if (inRange([lon, lat])) {
+      if (inRange(loc)) {
         console.log('Live: Found new sonde ' + sondeID + ' in range');
         // let marker = new ol.Feature({
         //   type: 'sonde',
@@ -126,7 +127,10 @@ function updateSonde(sondeList, frame) {
         //     type: 'route',
         //     geometry: new ol.geom.LineString(polyline),
         //   });
-        // sondeList[sondeID] = { 'marker': marker, 'frame': frameID, 'path': path };
+        const data = { serial: sondeID, frame: frameID, loc: loc, vel_v: frame.vel_v, vel_h: frame.vel_h };
+        let marker = ui.addSonde(data);
+        let path = ui.addPath([loc]);
+        sondeList[sondeID] = { marker: marker, path: path, data: data };
         // markerSource.addFeature(marker);
         // markerSource.addFeature(path);
       }
@@ -134,7 +138,7 @@ function updateSonde(sondeList, frame) {
   }
 }
 
-function startLiveTracker(sondeList) {
+function startLiveTracker(sondeList, ui) {
   const livedata_url = "wss://ws-reader.v2.sondehub.org/";
   const clientID = "SondeHub-Tracker-" + Math.floor(Math.random() * 10000000000);
   let client = new Paho.MQTT.Client(livedata_url, clientID);
@@ -159,10 +163,10 @@ function startLiveTracker(sondeList) {
   function onMessageArrived(message) {
     const frame = JSON.parse(message.payloadString.toString());
     if (frame.length == null) {
-      updateSonde(sondeList, frame);
+      decodeFrame(sondeList, frame, ui);
     } else {
       for (let i = 0; i < frame.length; i++) {
-        updateSonde(sondeList, frame[i]);
+        decodeFrame(sondeList, frame[i], ui);
       }
     }
   }
