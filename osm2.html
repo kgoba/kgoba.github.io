@@ -124,7 +124,7 @@
 
         let ui = {
             addSonde: function(data) {
-                let marker = L.circleMarker([data.loc.lat, data.loc.lon], { radius: 9, fillColor: '#FF0000', fillOpacity: 0.6, color: '#000000', weight: 1 });
+                let marker = L.circleMarker([data.lat, data.lon], { radius: 9, fillColor: '#FF0000', fillOpacity: 0.6, color: '#000000', weight: 1 });
                 if (data.hasOwnProperty('vel_v')) {
                     if (data.vel_v > 0) {
                         marker.setStyle({fillColor: sondeColorAscent});
@@ -140,23 +140,39 @@
                 return marker;
             },
             updateSonde: function(marker, data) {
-                marker.setLatLng([data.loc.lat, data.loc.lon]);
+                marker.setLatLng([data.lat, data.lon]);
                 let content = '<b>' + data.serial + '</b>';
-                content += '<br/>' + data.frequency.toFixed(2) + 'MHz';
-                content += '<br/>Alt: ' + data.loc.alt.toFixed(0) + 'm';
+                content += '<br/>Alt: ' + data.alt.toFixed(0) + 'm | v_v: ';
                 if (data.hasOwnProperty('vel_v')) {
-                    content += '<br/>v_v: ' + data.vel_v.toFixed(1) + 'm/s';
+                    content += data.vel_v.toFixed(1);
                     if (data.vel_v > 0) {
                         marker.setStyle({fillColor: sondeColorAscent});
                     } else {
                         marker.setStyle({fillColor: sondeColorDescent});
                     }
                 } else {
+                    content += '---';
                     marker.setStyle({fillColor: sondeColorAged});
                 }
+                content += 'm/s | v_h: '
                 if (data.hasOwnProperty('vel_h')) {
-                    content += '<br/>v_h: ' + data.vel_h.toFixed(1) + 'm/s';
+                    content += data.vel_h.toFixed(1);
                 }
+                else {
+                    content += '---';
+                }
+                content += 'm/s';
+                content += '<br/>RX: ';
+                if (data.hasOwnProperty('rssi')) {
+                    content += ' ' + data.rssi.toFixed(0) + 'dBm';
+                }
+                if (data.hasOwnProperty('snr')) {
+                    content += ' ' + data.snr.toFixed(0) + 'dB';
+                }
+                if (data.hasOwnProperty('uploader_callsign')) {
+                    content += ' by ' + data.uploader_callsign;
+                }
+                content += '<br/>Freq: ' + data.frequency.toFixed(2) + 'MHz';
                 marker.bindPopup(content);
                 // marker.setPopupContent(loc.alt.toFixed(0) + 'm');
                 // marker.setTooltipContent(loc.alt.toFixed(0) + 'm');

@@ -52,7 +52,7 @@ function fetchSondes(ui, mapRadiusKm) {
         if (inRange(loc)) {
           const serial = entry['serial'];
           const frameID = entry['frame'];
-          const data = { serial: serial, frame: frameID, loc: loc };
+          const data = { serial: serial, frame: frameID, lat: loc.lat, lon: loc.lon };
           let marker = ui.addSonde(data);
           sondeList[key] = { marker: marker, data: data };
           sondeListSize++;
@@ -88,20 +88,14 @@ function decodeFrame(sondeList, frame, ui) {
   if ('serial' in frame) {
     const sondeID = frame.serial;
     const loc = { lat: frame.lat, lon: frame.lon, alt: frame.alt };
-    const frameID = frame.frame;
     if (sondeList.hasOwnProperty(sondeID)) {
-      if (frameID > sondeList[sondeID].data.frame) {
+      if (frame.frame > sondeList[sondeID].data.frame) {
         console.log('Live: Update to sonde ' + sondeID + ' alt: ' + loc.alt);
         try {
-          sondeList[sondeID].data.frame = frameID;
-          sondeList[sondeID].data.loc = loc;
-          sondeList[sondeID].data.vel_v = frame.vel_v;
-          sondeList[sondeID].data.vel_h = frame.vel_h;
-          sondeList[sondeID].data.frequency = frame.frequency;
+          sondeList[sondeID].data = frame;
           let marker = sondeList[sondeID].marker;
-          let path = sondeList[sondeID].path;
-          ui.updateSonde(marker, sondeList[sondeID].data);
-          ui.updatePath(path, loc);
+          ui.updateSonde(marker, frame);
+          ui.updatePath(sondeList[sondeID].path, loc);
           // marker.getGeometry().setCoordinates(ol.proj.fromLonLat([lon, lat]));
           // // marker.type = 'liveSonde';
           // marker.setStyle(styles['liveSonde']);
@@ -130,10 +124,10 @@ function decodeFrame(sondeList, frame, ui) {
         //     type: 'route',
         //     geometry: new ol.geom.LineString(polyline),
         //   });
-        const data = { serial: sondeID, frame: frameID, loc: loc, vel_v: frame.vel_v, vel_h: frame.vel_h };
-        let marker = ui.addSonde(data);
+        // const data = { serial: sondeID, frame: frameID, loc: loc, vel_v: frame.vel_v, vel_h: frame.vel_h };
+        let marker = ui.addSonde(frame);
         let path = ui.addPath([loc]);
-        sondeList[sondeID] = { marker: marker, path: path, data: data };
+        sondeList[sondeID] = { marker: marker, path: path, data: frame };
         // markerSource.addFeature(marker);
         // markerSource.addFeature(path);
       }
