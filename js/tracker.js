@@ -45,6 +45,7 @@ function fetchSondes(ui, mapRadiusKm) {
   fetch('https://api.v2.sondehub.org/sondes?lat=57.00&lon=24.00&last=86400&distance=' + (1000*mapRadiusKm)).then(function (response) {
     response.json().then(function (result) {
 
+      var sondeListSize = 0;
       for (const key in result) {
         const entry = result[key];
         const loc = { lat: entry['lat'], lon: entry['lon'] };
@@ -54,9 +55,10 @@ function fetchSondes(ui, mapRadiusKm) {
           const data = { serial: serial, frame: frameID, loc: loc };
           let marker = ui.addSonde(data);
           sondeList[key] = { marker: marker, data: data };
+          sondeListSize++;
         }
       }
-      console.log('Loaded ' + sondeList.size + ' sondes');
+      console.log('Loaded ' + sondeListSize + ' sondes');
 
       for (const key in sondeList) {
         fetch('https://api.v2.sondehub.org/sonde/' + key).then(function (response) {
