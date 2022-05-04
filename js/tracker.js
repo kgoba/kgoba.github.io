@@ -97,6 +97,7 @@ function decodeFrame(sondeList, frame, ui) {
           sondeList[sondeID].data.loc = loc;
           sondeList[sondeID].data.vel_v = frame.vel_v;
           sondeList[sondeID].data.vel_h = frame.vel_h;
+          sondeList[sondeID].data.frequency = frame.frequency;
           let marker = sondeList[sondeID].marker;
           let path = sondeList[sondeID].path;
           ui.updateSonde(marker, sondeList[sondeID].data);
