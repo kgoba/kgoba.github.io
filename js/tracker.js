@@ -44,39 +44,43 @@ function fetchSondes(ui, mapRadiusKm) {
 
   fetch('https://api.v2.sondehub.org/sondes?lat=57.00&lon=24.00&last=86400&distance=' + (1000*mapRadiusKm)).then(function (response) {
     response.json().then(function (result) {
-
-      var sondeListSize = 0;
+      let sondeListSize = 0;
       for (const key in result) {
         const entry = result[key];
         const loc = { lat: entry['lat'], lon: entry['lon'] };
         if (inRange(loc)) {
-          const serial = entry['serial'];
-          const frameID = entry['frame'];
-          const data = { serial: serial, frame: frameID, lat: loc.lat, lon: loc.lon };
-          let marker = ui.addSonde(data);
-          sondeList[key] = { marker: marker, data: data };
+          let marker = ui.addSonde(entry);
+          sondeList[key] = { marker: marker, data: entry };
+          // Launch a regular updater
+          setInterval(function() {
+            ui.updateSonde(sondeList[key].marker, sondeList[key].data);
+          }, 1000);
           sondeListSize++;
         }
       }
       console.log('Loaded ' + sondeListSize + ' sondes');
 
       for (const key in sondeList) {
-        fetch('https://api.v2.sondehub.org/sonde/' + key).then(function (response) {
-          response.json().then(function (result) {
-            let polyline = [];
-            for (let index = 0; index < result.length; index++) {
-              const entry = result[index];
-              const point = { lat: entry['lat'], lon: entry['lon'] };
-              if (index % 5 == 0)
-                polyline.push(point);
-            }
-            console.log('Loaded ' + polyline.length + ' path points for sonde ' + key);
+        // Schedule downloading of archived flight data after some random time not to annoy the server
+        const timeoutMillis = 500 + Math.floor(Math.random() * 1500);
+        setTimeout(function() {
+          fetch('https://api.v2.sondehub.org/sonde/' + key).then(function (response) {
+            response.json().then(function (result) {
+              let polyline = [];
+              for (let index = 0; index < result.length; index++) {
+                // To save some memory, add only every fifth point of the path
+                if (index % 5 == 0) {
+                  const entry = result[index];
+                  const point = { lat: entry['lat'], lon: entry['lon'] };
+                  polyline.push(point);
+                }
+              }
+              console.log('Loaded ' + polyline.length + ' path points for sonde ' + key);
 
-            let path = ui.addPath(polyline);
-            sondeList[key].path = path;
-          })
-        });
-        setTimeout(function(){}, 500);
+              let path = ui.addPath(polyline);
+              sondeList[key].path = path;
+            })
+          })}, timeoutMillis);
       }
 
       startLiveTracker(sondeList, ui);
@@ -84,25 +88,19 @@ function fetchSondes(ui, mapRadiusKm) {
   });
 }
 
-function decodeFrame(sondeList, frame, ui) {
-  if ('serial' in frame) {
-    const sondeID = frame.serial;
-    const loc = { lat: frame.lat, lon: frame.lon, alt: frame.alt };
+function decodeFrame(sondeList, data, ui) {
+  if ('serial' in data) {
+    const sondeID = data.serial;
+    const loc = { lat: data.lat, lon: data.lon, alt: data.alt };
     if (sondeList.hasOwnProperty(sondeID)) {
-      if (frame.frame > sondeList[sondeID].data.frame) {
+      // Check if the newly received frame has a larger frame number than the current one
+      if (data.frame > sondeList[sondeID].data.frame) {
         console.log('Live: Update to sonde ' + sondeID + ' alt: ' + loc.alt);
         try {
-          sondeList[sondeID].data = frame;
+          sondeList[sondeID].data = data;
           let marker = sondeList[sondeID].marker;
-          ui.updateSonde(marker, frame);
+          ui.updateSonde(marker, data);
           ui.updatePath(sondeList[sondeID].path, loc);
-          // marker.getGeometry().setCoordinates(ol.proj.fromLonLat([lon, lat]));
-          // // marker.type = 'liveSonde';
-          // marker.setStyle(styles['liveSonde']);
-          // if (sondeList[sondeID].hasOwnProperty('path')) {
-          //   let path = sondeList[sondeID]['path'];
-          //   path.getGeometry().appendCoordinate(ol.proj.fromLonLat([lon, lat]));
-          // }
         }
         catch (error) {
           console.log('Error while updating sonde data: ' + error);
@@ -115,21 +113,13 @@ function decodeFrame(sondeList, frame, ui) {
     else {
       if (inRange(loc)) {
         console.log('Live: Found new sonde ' + sondeID + ' in range');
-        // let marker = new ol.Feature({
-        //   type: 'sonde',
-        //   geometry: new ol.geom.Point(ol.proj.fromLonLat([lon, lat])),
-        // });
-        // let polyline = [ol.proj.fromLonLat([lon, lat])];
-        // let path = new ol.Feature({
-        //     type: 'route',
-        //     geometry: new ol.geom.LineString(polyline),
-        //   });
-        // const data = { serial: sondeID, frame: frameID, loc: loc, vel_v: frame.vel_v, vel_h: frame.vel_h };
-        let marker = ui.addSonde(frame);
+        let marker = ui.addSonde(data);
         let path = ui.addPath([loc]);
-        sondeList[sondeID] = { marker: marker, path: path, data: frame };
-        // markerSource.addFeature(marker);
-        // markerSource.addFeature(path);
+        sondeList[sondeID] = { marker: marker, path: path, data: data };
+        // Launch a regular updater
+        setInterval(function() {
+          ui.updateSonde(sondeList[sondeID].marker, sondeList[sondeID].data);
+        }, 1000);
       }
     }
   }
