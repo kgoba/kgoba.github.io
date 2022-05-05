@@ -51,17 +51,13 @@ function fetchSondes(ui, mapRadiusKm) {
         if (inRange(loc)) {
           let marker = ui.addSonde(entry);
           sondeList[key] = { marker: marker, data: entry };
+
           // Launch a regular updater
           setInterval(function() {
             ui.updateSonde(sondeList[key].marker, sondeList[key].data);
-            const lastRXDate = new Date(sondeList[key].data.datetime);
-            const ageSeconds = (Date.now() - lastRXDate) / 1000;
-            if ((ageSeconds > 3600) && sondeList[key].hasOwnProperty('predictorTimer')) {
-              clearInterval(sondeList[key].predictorTimer);
-              delete (sondeList[key].predictorTimer);
-            }
           }, 1000);
 
+          // Fetch prediction data after small random time
           const timeoutMillis = 200 + Math.floor(Math.random() * 800);
           setTimeout(function() {
             getPrediction(key, sondeList, ui);
@@ -125,7 +121,7 @@ function decodeFrame(sondeList, data, ui) {
       }
 
       // Check the age of last prediction and update if necessary
-      if (sondeList[sondeID].hasOwnProperty('lastPredictTime')) {
+      if (sondeList[sondeID].lastPredictTime != null) {
         const predictAge = (Date.now() - sondeList[sondeID].lastPredictTime) / 1000;
         if (predictAge > 60) {
           getPrediction(sondeID, sondeList, ui);
@@ -205,7 +201,7 @@ function getPrediction(sondeID, sondeList, ui)
         }
         // console.log('Adding ' + polyline.length + ' predicted path points for sonde ' + sondeID);
 
-        if (!sondeList[sondeID].hasOwnProperty('predictedPath')) {
+        if (sondeList[sondeID].predictedPath == null) {
           let path = ui.addPath(polyline, 'predict');
           sondeList[sondeID].predictedPath = path;
         }

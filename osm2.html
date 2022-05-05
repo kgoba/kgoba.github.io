@@ -130,15 +130,21 @@
             },
             updateSonde: function(marker, data) {
                 marker.setLatLng([data.lat, data.lon]);
-                let content = '<b>' + data.serial + '</b>';
+                let content = '<b>' + data.serial + '</b> | ';
+                if (data.subtype != null) {
+                    content += data.subtype;
+                }
+                else {
+                    content += data.type;
+                }
                 content += '<br/>Alt: ' + data.alt.toFixed(0) + 'm | V: ';
-                if (data.hasOwnProperty('vel_v')) {
+                if (data.vel_v != null) {
                     content += data.vel_v.toFixed(1);
                 } else {
                     content += '---';
                 }
                 content += 'm/s | H: '
-                if (data.hasOwnProperty('vel_h')) {
+                if (data.vel_h != null) {
                     content += data.vel_h.toFixed(1);
                 }
                 else {
@@ -146,10 +152,10 @@
                 }
                 content += 'm/s';
                 content += '<br/>RX: ';
-                if (data.hasOwnProperty('frequency')) {
+                if (data.frequency != null) {
                     content += data.frequency.toFixed(2) + 'MHz | ';
                 }
-                const lastRXDate = new Date(data.datetime);
+                const lastRXDate = new Date(data.time_received);
                 // content += lastRXDate.getHours() + ':' + lastRXDate.getMinutes() + ':' + lastRXDate.getSeconds() + ' | ';
                 content += lastRXDate.toLocaleTimeString() + ' | ';
                 const ageSeconds = (Date.now() - lastRXDate) / 1000;
@@ -176,13 +182,13 @@
                     marker.setStyle({fillColor: sondeColorAged});
                 }
                 content += ' ago';
-                if (data.hasOwnProperty('uploader_callsign')) {
+                if (data.uploader_callsign != null) {
                     content += '<br/>By: ';
                     content += data.uploader_callsign;
-                    if (data.hasOwnProperty('rssi')) {
+                    if (data.rssi != null) {
                         content += ' (' + data.rssi.toFixed(0) + 'dBm)';
                     }
-                    if (data.hasOwnProperty('snr')) {
+                    if (data.snr != null) {
                         content += ' (' + data.snr.toFixed(0) + 'dB)';
                     }
                 }
