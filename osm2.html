@@ -190,14 +190,23 @@
                 // marker.setPopupContent(loc.alt.toFixed(0) + 'm');
                 // marker.setTooltipContent(loc.alt.toFixed(0) + 'm');
             },
-            addPath: function(pointList) {
-                let path = L.polyline(pointList.map(x => [x.lat, x.lon]), {color: '#FF0000', opacity: 0.6})
+            addPath: function(pointList, pathType) {
+                let styleOptions = null;
+                if (pathType == 'predict') {
+                    styleOptions = {color: '#CC4444', opacity: 0.4};
+                } else {
+                    styleOptions = {color: '#FF0000', opacity: 0.6};
+                }
+                let path = L.polyline(pointList.map(x => [x.lat, x.lon]), styleOptions)
                 path.addTo(map);
                 return path;
             },
-            updatePath: function(path, loc) {
+            extendPath: function(path, loc) {
                 path.addLatLng([loc.lat, loc.lon]);
             },
+            updatePath: function(path, pointList) {
+                path.setLatLngs(pointList);
+            }
         }
         fetchSondes(ui, mapRadiusKm);
     </script>

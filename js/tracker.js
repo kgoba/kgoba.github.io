@@ -55,6 +55,15 @@ function fetchSondes(ui, mapRadiusKm) {
           setInterval(function() {
             ui.updateSonde(sondeList[key].marker, sondeList[key].data);
           }, 1000);
+
+          const lastRXDate = new Date(entry.datetime);
+          const ageSeconds = (Date.now() - lastRXDate) / 1000;
+          // console.log('Sonde ' + key + ' age ' + ageSeconds.toFixed(0));
+          if (ageSeconds < 3600) {
+            setInterval(function() {
+              getPrediction(key, sondeList, ui);
+            }, 30000);
+          }
           sondeListSize++;
         }
       }
@@ -77,7 +86,7 @@ function fetchSondes(ui, mapRadiusKm) {
               }
               console.log('Loaded ' + polyline.length + ' path points for sonde ' + key);
 
-              let path = ui.addPath(polyline);
+              let path = ui.addPath(polyline, 'archived');
               sondeList[key].path = path;
             })
           })}, timeoutMillis);
@@ -95,12 +104,12 @@ function decodeFrame(sondeList, data, ui) {
     if (sondeList.hasOwnProperty(sondeID)) {
       // Check if the newly received frame has a larger frame number than the current one
       if (data.frame > sondeList[sondeID].data.frame) {
-        console.log('Live: Update to sonde ' + sondeID + ' alt: ' + loc.alt);
+        // console.log('Live: Update to sonde ' + sondeID + ' alt: ' + loc.alt);
         try {
           sondeList[sondeID].data = data;
           let marker = sondeList[sondeID].marker;
           ui.updateSonde(marker, data);
-          ui.updatePath(sondeList[sondeID].path, loc);
+          ui.extendPath(sondeList[sondeID].path, loc);
         }
         catch (error) {
           console.log('Error while updating sonde data: ' + error);
@@ -114,12 +123,15 @@ function decodeFrame(sondeList, data, ui) {
       if (inRange(loc)) {
         console.log('Live: Found new sonde ' + sondeID + ' in range');
         let marker = ui.addSonde(data);
-        let path = ui.addPath([loc]);
+        let path = ui.addPath([loc], 'live');
         sondeList[sondeID] = { marker: marker, path: path, data: data };
         // Launch a regular updater
         setInterval(function() {
           ui.updateSonde(sondeList[sondeID].marker, sondeList[sondeID].data);
         }, 1000);
+        setInterval(function() {
+          getPrediction(sondeID);
+        }, 30000);
       }
     }
   }
@@ -157,4 +169,32 @@ function startLiveTracker(sondeList, ui) {
       }
     }
   }
+}
+
+function getPrediction(sondeID, sondeList, ui)
+{
+  fetch('https://api.v2.sondehub.org/predictions?vehicles=' + sondeID).then(function (response) {
+    response.json().then(function (result) {
+      const pathData = JSON.parse(result[0].data);
+      let polyline = [];
+      for (let index = 0; index < pathData.length; index++) {
+        // To save some memory, add only every fifth point of the path
+        // if (index % 5 == 0)
+        {
+          const entry = pathData[index];
+          polyline.push({lat: entry['lat'], lon: entry['lon']});
+        }
+      }
+      console.log('Adding ' + polyline.length + ' predicted path points for sonde ' + sondeID);
+
+      if (!sondeList[sondeID].hasOwnProperty('predictedPath')) {
+        let path = ui.addPath(polyline, 'predict');
+        sondeList[sondeID].predictedPath = path;
+      }
+      else {
+        let path = sondeList[sondeID].predictedPath;
+        ui.updatePath(path, polyline);
+      }
+    })
+  });
 }
