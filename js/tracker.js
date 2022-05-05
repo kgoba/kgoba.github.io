@@ -54,16 +54,19 @@ function fetchSondes(ui, mapRadiusKm) {
           // Launch a regular updater
           setInterval(function() {
             ui.updateSonde(sondeList[key].marker, sondeList[key].data);
+            const lastRXDate = new Date(sondeList[key].data.datetime);
+            const ageSeconds = (Date.now() - lastRXDate) / 1000;
+            if ((ageSeconds > 3600) && sondeList[key].hasOwnProperty('predictorTimer')) {
+              clearInterval(sondeList[key].predictorTimer);
+              delete (sondeList[key].predictorTimer);
+            }
           }, 1000);
 
-          const lastRXDate = new Date(entry.datetime);
-          const ageSeconds = (Date.now() - lastRXDate) / 1000;
-          // console.log('Sonde ' + key + ' age ' + ageSeconds.toFixed(0));
-          if (ageSeconds < 3600) {
-            setInterval(function() {
-              getPrediction(key, sondeList, ui);
-            }, 30000);
-          }
+          const timeoutMillis = 200 + Math.floor(Math.random() * 800);
+          setTimeout(function() {
+            getPrediction(key, sondeList, ui);
+          }, timeoutMillis);
+
           sondeListSize++;
         }
       }
@@ -101,6 +104,8 @@ function decodeFrame(sondeList, data, ui) {
   if ('serial' in data) {
     const sondeID = data.serial;
     const loc = { lat: data.lat, lon: data.lon, alt: data.alt };
+
+    // Check if sonde exists in our list
     if (sondeList.hasOwnProperty(sondeID)) {
       // Check if the newly received frame has a larger frame number than the current one
       if (data.frame > sondeList[sondeID].data.frame) {
@@ -118,8 +123,20 @@ function decodeFrame(sondeList, data, ui) {
       else {
         // console.log('Live: Update to sonde ' + sondeID + ' (discarded)');
       }
+
+      // Check the age of last prediction and update if necessary
+      if (sondeList[sondeID].hasOwnProperty('lastPredictTime')) {
+        const predictAge = (Date() - sondeList[sondeID].lastPredictTime) / 1000;
+        if (predictAge > 60) {
+          getPrediction(sondeID, sondeList, ui);
+        }
+      }
+      else {
+        getPrediction(sondeID, sondeList, ui);
+      }
     }
     else {
+      // A new sonde is found (not on our list)
       if (inRange(loc)) {
         console.log('Live: Found new sonde ' + sondeID + ' in range');
         let marker = ui.addSonde(data);
@@ -129,9 +146,9 @@ function decodeFrame(sondeList, data, ui) {
         setInterval(function() {
           ui.updateSonde(sondeList[sondeID].marker, sondeList[sondeID].data);
         }, 1000);
-        setInterval(function() {
-          getPrediction(sondeID);
-        }, 30000);
+
+        // Request prediction
+        getPrediction(sondeID, sondeList, ui);
       }
     }
   }
@@ -173,27 +190,29 @@ function startLiveTracker(sondeList, ui) {
 
 function getPrediction(sondeID, sondeList, ui)
 {
+  // Add timestamp so we know later how old the prediction is
+  sondeList[sondeID].lastPredictTime = Date();
+  console.log('Checking prediction for ' + sondeID);
+
   fetch('https://api.v2.sondehub.org/predictions?vehicles=' + sondeID).then(function (response) {
     response.json().then(function (result) {
-      const pathData = JSON.parse(result[0].data);
-      let polyline = [];
-      for (let index = 0; index < pathData.length; index++) {
-        // To save some memory, add only every fifth point of the path
-        // if (index % 5 == 0)
-        {
+      if (result.length > 0) {
+        const pathData = JSON.parse(result[0].data);
+        let polyline = [];
+        for (let index = 0; index < pathData.length; index++) {
           const entry = pathData[index];
           polyline.push({lat: entry['lat'], lon: entry['lon']});
         }
-      }
-      console.log('Adding ' + polyline.length + ' predicted path points for sonde ' + sondeID);
+        // console.log('Adding ' + polyline.length + ' predicted path points for sonde ' + sondeID);
 
-      if (!sondeList[sondeID].hasOwnProperty('predictedPath')) {
-        let path = ui.addPath(polyline, 'predict');
-        sondeList[sondeID].predictedPath = path;
-      }
-      else {
-        let path = sondeList[sondeID].predictedPath;
-        ui.updatePath(path, polyline);
+        if (!sondeList[sondeID].hasOwnProperty('predictedPath')) {
+          let path = ui.addPath(polyline, 'predict');
+          sondeList[sondeID].predictedPath = path;
+        }
+        else {
+          let path = sondeList[sondeID].predictedPath;
+          ui.updatePath(path, polyline);
+        }
       }
     })
   });

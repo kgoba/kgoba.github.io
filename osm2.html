@@ -199,13 +199,21 @@
                 }
                 let path = L.polyline(pointList.map(x => [x.lat, x.lon]), styleOptions)
                 path.addTo(map);
+                if (pathType == 'predict') {
+                    const lastPoint = pointList[pointList.length - 1];
+                    let marker = L.circleMarker([lastPoint.lat, lastPoint.lon], { radius: 9, fill: false, color: '#000000', opacity: 0.4, weight: 2 });
+                    marker.addTo(map);
+                    return { path: path, marker: marker };
+                }
                 return path;
             },
             extendPath: function(path, loc) {
                 path.addLatLng([loc.lat, loc.lon]);
             },
             updatePath: function(path, pointList) {
-                path.setLatLngs(pointList);
+                path.path.setLatLngs(pointList);
+                const lastPoint = pointList[pointList.length - 1];
+                path.marker.setLatLng([lastPoint.lat, lastPoint.lon]);
             }
         }
         fetchSondes(ui, mapRadiusKm);
