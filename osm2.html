@@ -49,40 +49,30 @@
             return map.distance(mapCenter, [point.lat, point.lon]) < (mapRadiusKm * 1000);
         }
 
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        });
+        osm.id="Mapnik";
+
+        var worldimagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+            minZoom: 0,
+            maxZoom: 19,
+        });
+        worldimagery.id="WorldImagery";
+        
+        var baseMaps = {
+            "OSM": osm,
+            "WorldImagery": worldimagery,
+        }
+
         let map = L.map('map', {closePopupOnClick: false});
+        
+        layers = L.control.layers(baseMaps, null, {position: "topleft"}).addTo(map);
+                
         map.setView(mapCenter, 6);
         // map.fitWorld();
-
-        // OpenstreetMaps
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
-
-        // WoldImagery map
-        //L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        //        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-        //        minZoom: 0,
-        //        maxZoom: 19,
-        //}).addTo(map);
-
-        // 'https://api.mapbox.com/styles/v1/{username}/{style_id}/tiles/{tilesize}/{z}/{x}/{y}{@2x}'
-        // L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
-        //     attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-        //     maxZoom: 18,
-        //     id: 'mapbox/outdoors-v11',
-        //     tileSize: 512,
-        //     zoomOffset: -1,
-        //     accessToken: 'pk.eyJ1Ijoia2FybGlzZ28iLCJhIjoiY2wxa251aHg3MDJtZjNwbzZ5bXhieDAxOSJ9.CMjr3LPyI_fWDrR07tJe5Q'
-        // }).addTo(map);
-
-        // L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
-        //     maxZoom: 18,
-        //     attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
-        //         'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-        //     id: 'mapbox/streets-v11',
-        //     tileSize: 512,
-        //     zoomOffset: -1
-        // }).addTo(map);
 
         // Move the default location of zoom control
         map.zoomControl.setPosition('bottomright');
