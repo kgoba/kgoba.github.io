@@ -4,4 +4,3 @@
 4) Add used geolocation
 5) Add used geolocation pust to server (chase car mode)
 6) Add distance bearing calculations for selected sonde from user geolocation data
-7) Add topo map
