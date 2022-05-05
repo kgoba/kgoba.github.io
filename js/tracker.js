@@ -126,7 +126,7 @@ function decodeFrame(sondeList, data, ui) {
 
       // Check the age of last prediction and update if necessary
       if (sondeList[sondeID].hasOwnProperty('lastPredictTime')) {
-        const predictAge = (Date() - sondeList[sondeID].lastPredictTime) / 1000;
+        const predictAge = (Date.now() - sondeList[sondeID].lastPredictTime) / 1000;
         if (predictAge > 60) {
           getPrediction(sondeID, sondeList, ui);
         }
@@ -191,7 +191,7 @@ function startLiveTracker(sondeList, ui) {
 function getPrediction(sondeID, sondeList, ui)
 {
   // Add timestamp so we know later how old the prediction is
-  sondeList[sondeID].lastPredictTime = Date();
+  sondeList[sondeID].lastPredictTime = Date.now();
   console.log('Checking prediction for ' + sondeID);
 
   fetch('https://api.v2.sondehub.org/predictions?vehicles=' + sondeID).then(function (response) {
