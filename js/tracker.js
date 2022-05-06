@@ -1,5 +1,5 @@
 function fetchListeners(addListener) {
-  fetch('https://api.v2.sondehub.org/listeners/telemetry')
+  fetch('https://api.v2.sondehub.org/listeners/telemetry?duration=1d')
     .then(response => response.json())
     .then(function (result) {
       let numAdded = 0;
