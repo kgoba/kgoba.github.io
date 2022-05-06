@@ -190,6 +190,8 @@
                         content += ' (' + data.snr.toFixed(0) + 'dB)';
                     }
                 }
+                content += '<br/>';
+                content += data.lat.toFixed(5) + ' ' + data.lon.toFixed(5);
                 marker.bindPopup(content);
                 // marker.setPopupContent(loc.alt.toFixed(0) + 'm');
                 // marker.setTooltipContent(loc.alt.toFixed(0) + 'm');
@@ -205,8 +207,12 @@
                 path.addTo(map);
                 if (pathType == 'predict') {
                     const lastPoint = pointList[pointList.length - 1];
-                    let marker = L.circleMarker([lastPoint.lat, lastPoint.lon], { radius: 9, fill: false, color: '#000000', opacity: 0.4, weight: 2 });
+                    let marker = L.circleMarker([lastPoint.lat, lastPoint.lon], { radius: 9, fillColor: '#FF0000', fillOpacity: 0.1, color: '#000000', opacity: 0.4, weight: 2 });
                     marker.addTo(map);
+
+                    let content = lastPoint.lat.toFixed(5) + ' ' + lastPoint.lon.toFixed(5);
+                    marker.bindPopup(content);
+
                     return { path: path, marker: marker };
                 }
                 return path;
@@ -218,6 +224,9 @@
                 path.path.setLatLngs(pointList);
                 const lastPoint = pointList[pointList.length - 1];
                 path.marker.setLatLng([lastPoint.lat, lastPoint.lon]);
+
+                let content = lastPoint.lat.toFixed(5) + ' ' + lastPoint.lon.toFixed(5);
+                path.marker.bindPopup(content);
             }
         }
         fetchSondes(ui, mapRadiusKm);
