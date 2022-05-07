@@ -39,6 +39,8 @@
         //const mapCenter = [35.00, -115.00];
         //const mapRadiusKm = 1500;
 
+        const chaseUploadInterval = 5;           // in seconds
+
         const sondeMaxAge = 3 * 60 * 60;         // 3 hours in seconds
         const sondeColorAscent  = '#0066FF';     // If sonde ascending - blue
         const sondeColorDescent  = '#FF0000';    // If sonde descending - red
@@ -90,11 +92,72 @@
         // Move the default location of zoom control
         map.zoomControl.setPosition('bottomright');
 
-        var myCircleAccuracy = L.circle(mapCenter, {radius: 1200, color: '#FF00FF'});
+        let myCircleAccuracy = L.circle(mapCenter, {radius: 1200, color: '#FF00FF'});
         myCircleAccuracy.addTo(map);
-        var myCirclePos = L.circleMarker(mapCenter, { radius: 6, fill: false, color: '#FF00FF', weight: 3 });
+        let myCirclePos = L.circleMarker(mapCenter, { radius: 6, fill: false, color: '#FF00FF', weight: 3 });
         myCirclePos.addTo(map);
 
+        let lastChaseUpload = Date.now();
+        let message = 'Send your location to server?\nChase car mode.';
+        let chaseMode = window.confirm(message);
+        let chaseData = {
+            callSign : '',
+            antenna : '',
+            email : ''
+        };
+
+        if (chaseMode) loadChaseParameters();
+
+        function getCookie(cname) {
+            let name = cname + '=';
+            let decodedCookie = decodeURIComponent(document.cookie);
+            //console.log(document.cookie);
+            let ca = decodedCookie.split(";");
+            for(let i = 0; i <ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) == ' ') {
+                    c = c.substring(1);
+                }
+                if (c.indexOf(name) == 0) {
+                    return c.substring(name.length, c.length);
+                }
+            }
+            return "";
+        }
+
+        function loadChaseParameters() {
+            if (getCookie("chaseDataCallSign") != "") {
+                chaseData.callSign = getCookie("chaseDataCallSign");
+            } else {
+                chaseData.callSign = "Voldemort";
+            }
+            chaseData.callSign = prompt("Enter callsign:", chaseData.callSign);
+
+            if (getCookie("chaseDataAntenna") != "") {
+                chaseData.antenna = getCookie("chaseDataAntenna");
+            } else {
+                chaseData.antenna = "Portable 1/4 monopole";
+            }
+            chaseData.antenna = prompt("Enter Antenna name:", chaseData.antenna);
+
+            if (getCookie("chaseDataEmail") != "") {
+                chaseData.email = getCookie("chaseDataEmail");
+            } else {
+                chaseData.email = "none@node.org";
+            }
+            chaseData.email = prompt("Enter your email.\n Need if sondehub.org admins have questions.", chaseData.email);
+
+            const d = new Date();
+            d.setTime(d.getTime() + (10*365*24*60*60*1000));    // 10 years
+            let expires = 'expires='+ d.toUTCString();
+
+            document.cookie = "chaseDataCallSign=" + chaseData.callSign + ";" + expires + ";path=/;SameSite=None; Secure";
+            document.cookie = "chaseDataAntenna=" + chaseData.antenna + ";" + expires + ";path=/;SameSite=None; Secure";
+            document.cookie = "chaseDataEmail=" + chaseData.email + ";" + expires + ";path=/;SameSite=None; Secure";
+        }
+
+        //let lat = 57.0;
+        //let lon = 25.0;
         function onLocationFound(e) {
             //console.log(e);
             let radius = e.accuracy / 2;
@@ -106,6 +169,16 @@
             // L.circleMarker(e.latlng, { radius: 6, fill: false, color: '#FF00FF', weight: 3 }).addTo(map);
             // let locationMarker = L.marker(e.latlng).addTo(map);
             //     .bindPopup('You are within ' + radius + ' meters from this point').openPopup();
+            if (chaseMode) {
+                if ( lastChaseUpload + (chaseUploadInterval * 1000) <  Date.now() ) {
+                    let altitude = isNaN(e.altitude) ? 0 : e.altitude;
+                    //lat += 0.001;
+                    //lon += 0.001;
+                    //doChaseUpload(lat, lon, altitude, chaseData.callSign, chaseData.antenna, chaseData.email);
+                    //doChaseUpload(e.latlng.latitude, e.latlng.longitude, altitude, chaseData.callSign, chaseData.antenna, chaseData.email);
+                    //console.log('updateChase', chaseData, lat, lon);
+                }
+            }
         }
 
         function onLocationError(e) {

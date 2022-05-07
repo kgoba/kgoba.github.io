@@ -299,3 +299,41 @@ function calcBearing(lat1, lon1, lat2, lon2) {
   brng = (brng*180/Math.PI + 360) % 360; // in degrees
   return brng;
 }
+
+/*!
+ * JavaScript function to send chase can position
+ *
+ * Original examples  from google/interner.
+ *
+ * @param   {Number} lat1, lon1: chase car location in decimal degrees
+ * @param   {Number} alt: chase car altitude in meters
+ * @param   {String} callsign, antenna, email: Additional info
+ * @returns Nothing to return yet
+ */
+
+function doChaseUpload(lat, lon, alt, callsign, antenna, email){
+    let url = "https://api.v2.sondehub.org/listeners";
+
+    let data = `{"software_name": "kgChase",
+        "software_version": "0.0.1",
+        "uploader_callsign": "` + callsign + `",
+        "uploader_position": [` + lat +`, ` + lon + `, ` + alt + `],
+        "uploader_antenna": "` + antenna + `",
+        "uploader_contact_email": "` + email + `",
+        "mobile": true
+    }`;
+
+    let xhr = new XMLHttpRequest();
+/*
+    xhr.onreadystatechange = function () {
+       if (xhr.readyState === 4) {
+          //console.log(myxhr.status);
+          //console.log(myxhr.statusText);
+          console.log(myxhr.responseText.toString());
+       }};
+*/
+
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.send(data);
+}
