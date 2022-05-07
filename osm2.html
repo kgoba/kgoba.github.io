@@ -90,21 +90,33 @@
         // Move the default location of zoom control
         map.zoomControl.setPosition('bottomright');
 
+        var myCircleAccuracy = L.circle(mapCenter, {radius: 1200, color: '#FF00FF'});
+        myCircleAccuracy.addTo(map);
+        var myCirclePos = L.circleMarker(mapCenter, { radius: 6, fill: false, color: '#FF00FF', weight: 3 });
+        myCirclePos.addTo(map);
+
         function onLocationFound(e) {
+            //console.log(e);
             let radius = e.accuracy / 2;
-            L.circle(e.latlng, {radius: radius, color: '#FF00FF'}).addTo(map);
-            L.circleMarker(e.latlng, { radius: 6, fill: false, color: '#FF00FF', weight: 3 }).addTo(map);
+            myCircleAccuracy.setLatLng(e.latlng);
+            myCircleAccuracy.setRadius(radius);
+            myCirclePos.setLatLng(e.latlng);
+
+            // L.circle(e.latlng, {radius: radius, color: '#FF00FF'}).addTo(map);
+            // L.circleMarker(e.latlng, { radius: 6, fill: false, color: '#FF00FF', weight: 3 }).addTo(map);
             // let locationMarker = L.marker(e.latlng).addTo(map);
             //     .bindPopup('You are within ' + radius + ' meters from this point').openPopup();
         }
 
         function onLocationError(e) {
-            alert(e.message);
+            //alert(e.message);
+            console.log(e.message);
         }
 
         map.on('locationfound', onLocationFound);
         map.on('locationerror', onLocationError);
-        map.locate({setView: false, maxZoom: 8});
+
+        map.locate({watch: true, enableHighAccuracy: true, maximumAge: 10000, setView: false, maxZoom: 8});
 
         fetchListeners(function(name, loc) {
             let marker = L.circleMarker([loc.lat, loc.lon], { radius: 6, fillColor: '#008000', fillOpacity: 0.6, color: '#000000', weight: 1 });
