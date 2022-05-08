@@ -143,7 +143,7 @@
             if (getCookie("chaseDataEmail") != "") {
                 chaseData.email = getCookie("chaseDataEmail");
             } else {
-                chaseData.email = "none@node.org";
+                chaseData.email = "none@none.org";
             }
             chaseData.email = prompt("Enter your email.\n Need if sondehub.org admins have questions.", chaseData.email);
 
@@ -171,11 +171,12 @@
             //     .bindPopup('You are within ' + radius + ' meters from this point').openPopup();
             if (chaseMode) {
                 if ( lastChaseUpload + (chaseUploadInterval * 1000) <  Date.now() ) {
+                    lastChaseUpload = Date.now();
                     let altitude = isNaN(e.altitude) ? 0 : e.altitude;
                     //lat += 0.001;
                     //lon += 0.001;
                     //doChaseUpload(lat, lon, altitude, chaseData.callSign, chaseData.antenna, chaseData.email);
-                    //doChaseUpload(e.latlng.latitude, e.latlng.longitude, altitude, chaseData.callSign, chaseData.antenna, chaseData.email);
+                    doChaseUpload(e.latlng.latitude, e.latlng.longitude, altitude, chaseData.callSign, chaseData.antenna, chaseData.email);
                     //console.log('updateChase', chaseData, lat, lon);
                 }
             }
@@ -213,7 +214,12 @@
             },
             updateSonde: function(marker, data) {
                 marker.setLatLng([data.lat, data.lon]);
-                let content = '<b>' + data.serial + '</b> | ';
+                let content = '<b>';
+                content += '<a href="#"  onClick="navigator.clipboard.writeText(\'' + data.serial + '\');">';
+                content += data.serial;
+                content += '</a>';
+                content += '</b> | ';
+
                 if (data.subtype != null) {
                     content += data.subtype;
                 }
@@ -275,8 +281,11 @@
                         content += ' (' + data.snr.toFixed(0) + 'dB)';
                     }
                 }
+                let latlon = data.lat.toFixed(5) + ' ' + data.lon.toFixed(5);
                 content += '<br/>';
+                content += '<a href="#"  onClick="navigator.clipboard.writeText(\'' + latlon + '\');">';
                 content += data.lat.toFixed(5) + ' ' + data.lon.toFixed(5);
+                content += '</a>';
                 marker.bindPopup(content);
                 // marker.setPopupContent(loc.alt.toFixed(0) + 'm');
                 // marker.setTooltipContent(loc.alt.toFixed(0) + 'm');
@@ -295,7 +304,10 @@
                     let marker = L.circleMarker([lastPoint.lat, lastPoint.lon], { radius: 9, fillColor: '#FF0000', fillOpacity: 0.1, color: '#000000', opacity: 0.4, weight: 2 });
                     marker.addTo(map);
 
-                    let content = lastPoint.lat.toFixed(5) + ' ' + lastPoint.lon.toFixed(5);
+                    let latlon = lastPoint.lat.toFixed(5) + ' ' + lastPoint.lon.toFixed(5);
+                    let content = '<a href="#"  onClick="navigator.clipboard.writeText(\'' + latlon + '\');">';
+                    content += latlon;
+                    content += '</a>';
                     marker.bindPopup(content);
 
                     return { path: path, marker: marker };
@@ -309,8 +321,11 @@
                 path.path.setLatLngs(pointList);
                 const lastPoint = pointList[pointList.length - 1];
                 path.marker.setLatLng([lastPoint.lat, lastPoint.lon]);
-
-                let content = lastPoint.lat.toFixed(5) + ' ' + lastPoint.lon.toFixed(5);
+                let latlon = lastPoint.lat.toFixed(5) + ' ' + lastPoint.lon.toFixed(5);
+                let content = '<a href="#"  onClick="navigator.clipboard.writeText(\'' + latlon + '\');">';
+                content += latlon;
+                content += '</a>';
+                //let content = lastPoint.lat.toFixed(5) + ' ' + lastPoint.lon.toFixed(5);
                 path.marker.bindPopup(content);
             }
         }

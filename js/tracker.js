@@ -324,14 +324,14 @@ function doChaseUpload(lat, lon, alt, callsign, antenna, email){
     }`;
 
     let xhr = new XMLHttpRequest();
-/*
+
     xhr.onreadystatechange = function () {
        if (xhr.readyState === 4) {
           //console.log(myxhr.status);
           //console.log(myxhr.statusText);
           console.log(myxhr.responseText.toString());
        }};
-*/
+
 
     xhr.open("PUT", url);
     xhr.setRequestHeader("Content-Type", "application/json");
