@@ -226,6 +226,8 @@
                         content += ' (' + data.snr.toFixed(0) + 'dB)';
                     }
                 }
+                content += '<br/>';
+                content += data.lat.toFixed(5) + ' ' + data.lon.toFixed(5);
                 marker.bindPopup(content);
             },
             addPath: function(pointList, pathType, data) {
@@ -242,6 +244,10 @@
                     const lastPoint = pointList[pointList.length - 1];
                     let marker = L.circleMarker([lastPoint.lat, lastPoint.lon], { radius: 9, fill: true, color: '#000000CC', fillColor: '#000000DD', weight: 1 });
                     marker.addTo(map);
+
+                    let content = lastPoint.lat.toFixed(5) + ' ' + lastPoint.lon.toFixed(5);
+                    marker.bindPopup(content);
+
                     return { path: path, marker: marker };
                 }
                 return path;
