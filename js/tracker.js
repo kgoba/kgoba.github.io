@@ -1,5 +1,5 @@
 function fetchListeners(addListener) {
-  fetch('https://api.v2.sondehub.org/listeners/telemetry')
+  fetch('https://api.v2.sondehub.org/listeners/telemetry?duration=1d')
     .then(response => response.json())
     .then(function (result) {
       let numAdded = 0;
@@ -52,10 +52,11 @@ function fetchSondes(ui, mapRadiusKm) {
           let marker = ui.addSonde(entry);
           sondeList[key] = { marker: marker, data: entry };
 
-          // Launch a regular updater
+          ui.updateSonde(sondeList[key].marker, sondeList[key].data);
+          // Launch a regular popup content updater
           setInterval(function() {
             ui.updateSonde(sondeList[key].marker, sondeList[key].data);
-          }, 1000);
+          }, 60*1000);
 
           // Fetch prediction data after small random time
           const timeoutMillis = 200 + Math.floor(Math.random() * 800);
@@ -85,7 +86,7 @@ function fetchSondes(ui, mapRadiusKm) {
               }
               console.log('Loaded ' + polyline.length + ' path points for sonde ' + key);
 
-              let path = ui.addPath(polyline, 'archived');
+              let path = ui.addPath(polyline, 'archived', key);
               sondeList[key].path = path;
             })
           })}, timeoutMillis);
@@ -136,7 +137,7 @@ function decodeFrame(sondeList, data, ui) {
       if (inRange(loc)) {
         console.log('Live: Found new sonde ' + sondeID + ' in range');
         let marker = ui.addSonde(data);
-        let path = ui.addPath([loc], 'live');
+        let path = ui.addPath([loc], 'live', sondeID);
         sondeList[sondeID] = { marker: marker, path: path, data: data };
         // Launch a regular updater
         setInterval(function() {
@@ -188,26 +189,37 @@ function getPrediction(sondeID, sondeList, ui)
 {
   // Add timestamp so we know later how old the prediction is
   sondeList[sondeID].lastPredictTime = Date.now();
-  console.log('Checking prediction for ' + sondeID);
+  console.log('Requesting prediction for ' + sondeID);
 
   fetch('https://api.v2.sondehub.org/predictions?vehicles=' + sondeID).then(function (response) {
     response.json().then(function (result) {
       if (result.length > 0) {
         const pathData = JSON.parse(result[0].data);
+
+        sondeList[sondeID].pred_landing = {
+          serial: result[0].vehicle,
+          loc: pathData[pathData.length - 1],
+          time: new Date(result[0].time),
+          ascent_rate: result[0].ascent_rate,
+          descent_rate: result[0].descent_rate,
+        };
+
         let polyline = [];
         for (let index = 0; index < pathData.length; index++) {
           const entry = pathData[index];
-          polyline.push({lat: entry['lat'], lon: entry['lon']});
+          polyline.push({lat: entry.lat, lon: entry.lon});
         }
         // console.log('Adding ' + polyline.length + ' predicted path points for sonde ' + sondeID);
 
+        // Check if predicted path has already been added previously, if not, add it
         if (sondeList[sondeID].predictedPath == null) {
-          let path = ui.addPath(polyline, 'predict');
+          let path = ui.addPath(polyline, 'predict', sondeList[sondeID].data);
           sondeList[sondeID].predictedPath = path;
+          ui.updatePath(path, polyline, sondeList[sondeID].data, sondeList[sondeID].pred_landing);
         }
         else {
           let path = sondeList[sondeID].predictedPath;
-          ui.updatePath(path, polyline);
+          ui.updatePath(path, polyline, sondeList[sondeID].data, sondeList[sondeID].pred_landing);
         }
       }
     })
