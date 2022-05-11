@@ -6,7 +6,7 @@
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+	<link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css" integrity="sha512-hoalWLoI8r4UszCkZ5kL8vayOGVae1oxXe/2A4AO6J9+580uKHDO3JdHb7NzwwzK5xr/Fs0W40kiNHxM9vyTtQ==" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.8.0/dist/leaflet.js" integrity="sha512-BB3hKbKWOc9Ez/TAwyWxNXeoV9c1v6FIeYiBieIWkpLjauysF18NzgR1MBNBXf8/KABdlkX68nAhlwcDFLGPCQ==" crossorigin=""></script>
@@ -34,34 +34,19 @@
     <script>
         const mapCenter = [57.00, 24.00];
         const mapRadiusKm = 500;
-        const deg2rad = Math.PI/180;
-        const rad2deg = 180/Math.PI;
 
         // For teleporting to active site (debugging)
         //const mapCenter = [35.00, -115.00];
         //const mapRadiusKm = 1500;
 
         const sondeMaxAge = 3600;                  // maximum sonde age in seconds
-        const sondeColorAscent  = '#FFFF44DD';     // If sonde ascending - blue
-        const sondeColorDescent  = '#FF4400DD';    // If sonde descending - red
-        const sondeColorAged  = '#0088FFAA';       // If no data for sondeAgeMs miliseconds - yellow
+        const sondeColorAscent  = '#FFFF44DD';     // If sonde ascending - Yellow
+        const sondeColorDescent  = '#FF4400DD';    // If sonde descending - Orange
+        const sondeColorAged  = '#0088FFAA';       // If no data for sondeAgeMs miliseconds - Blue
 
         function inRange(point) {
             // return (Math.abs(point[0] - mapCenter[1]) < 20) && (Math.abs(point[1] - mapCenter[0]) < 14);
             return map.distance(mapCenter, [point.lat, point.lon]) < (mapRadiusKm * 1000);
-        }
-
-        function getBearing(lat1, lon1, lat2, lon2) {
-            let x, y, brng;
-            lon1 = lon1 * deg2rad;
-            lon2 = lon2 * deg2rad;
-            lat1 = lat1 * deg2rad;
-            lat2 = lat2 * deg2rad;
-            y = Math.sin(lon2 - lon1) * Math.cos(lat2);
-            x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(lon2-lon1);
-            brng = Math.atan2(y, x);
-            brng = (brng*180/Math.PI + 360) % 360; // in degrees
-            return brng;
         }
 
         let osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -102,13 +87,13 @@
         let myCirclePos = L.circleMarker(mapCenter, {radius: 6, fill: false, color: '#FF00FF', weight: 3}).addTo(map);
         let myPos = null;
 
-        // Add scale control to the map
-        L.control.scale().addTo(map);
-
         map.setView(mapCenter, 6);
 
         // Move the default location of zoom control
-        map.zoomControl.setPosition('bottomright');
+        map.zoomControl.setPosition('topright');
+
+        // Add scale control to the map
+        L.control.scale().addTo(map);
 
         function onLocationFound(e) {
             let radius = e.accuracy / 2;
@@ -144,13 +129,20 @@
                 let marker = L.circleMarker([data.lat, data.lon], { radius: 9, fillColor: '#FF0000', fillOpacity: 0.6, color: '#000000', weight: 1 });
                 marker.setStyle({fillColor: sondeColorAged});
                 marker.addTo(map);
-                marker.bindTooltip(data.serial); // .openTooltip();
+                let content = '<a href="#"  onClick="navigator.clipboard.writeText(\'' + data.serial + '\');">';
+                content += data.serial;
+                content += '</a>';
+                marker.bindTooltip(content); // .openTooltip();
                 return marker;
             },
             updateSonde: function(marker, data) {
                 // Called when a new data packet is received for a sonde - should reposition the graphical object (marker) and update the popup content
                 marker.setLatLng([data.lat, data.lon]);
-                let content = '<b>' + data.serial + '</b> | ';
+                let content = '<b>'
+                content += '<a href="#"  onClick="navigator.clipboard.writeText(\'' + data.serial + '\');">';
+                content += data.serial;
+                content += '</a>';
+                content +='</b> | ';
                 if (data.subtype != null) {
                     content += data.subtype;
                 }

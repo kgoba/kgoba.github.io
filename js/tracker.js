@@ -1,3 +1,6 @@
+const deg2rad = Math.PI/180;
+const rad2deg = 180/Math.PI;
+
 function fetchListeners(addListener) {
   fetch('https://api.v2.sondehub.org/listeners/telemetry?duration=1d')
     .then(response => response.json())
@@ -52,11 +55,10 @@ function fetchSondes(ui, mapRadiusKm) {
           let marker = ui.addSonde(entry);
           sondeList[key] = { marker: marker, data: entry };
 
-          ui.updateSonde(sondeList[key].marker, sondeList[key].data);
-          // Launch a regular popup content updater
+          // Launch a regular updater
           setInterval(function() {
             ui.updateSonde(sondeList[key].marker, sondeList[key].data);
-          }, 60*1000);
+          }, 1000);
 
           // Fetch prediction data after small random time
           const timeoutMillis = 200 + Math.floor(Math.random() * 800);
@@ -71,7 +73,7 @@ function fetchSondes(ui, mapRadiusKm) {
 
       for (const key in sondeList) {
         // Schedule downloading of archived flight data after some random time not to annoy the server
-        const timeoutMillis = 500 + Math.floor(Math.random() * 1500);
+        const timeoutMillis = 3000 + Math.floor(Math.random() * 6500);
         setTimeout(function() {
           fetch('https://api.v2.sondehub.org/sonde/' + key).then(function (response) {
             response.json().then(function (result) {
@@ -86,7 +88,7 @@ function fetchSondes(ui, mapRadiusKm) {
               }
               console.log('Loaded ' + polyline.length + ' path points for sonde ' + key);
 
-              let path = ui.addPath(polyline, 'archived', key);
+              let path = ui.addPath(polyline, 'archived');
               sondeList[key].path = path;
             })
           })}, timeoutMillis);
@@ -137,7 +139,7 @@ function decodeFrame(sondeList, data, ui) {
       if (inRange(loc)) {
         console.log('Live: Found new sonde ' + sondeID + ' in range');
         let marker = ui.addSonde(data);
-        let path = ui.addPath([loc], 'live', sondeID);
+        let path = ui.addPath([loc], 'live');
         sondeList[sondeID] = { marker: marker, path: path, data: data };
         // Launch a regular updater
         setInterval(function() {
@@ -189,37 +191,26 @@ function getPrediction(sondeID, sondeList, ui)
 {
   // Add timestamp so we know later how old the prediction is
   sondeList[sondeID].lastPredictTime = Date.now();
-  console.log('Requesting prediction for ' + sondeID);
+  console.log('Checking prediction for ' + sondeID);
 
   fetch('https://api.v2.sondehub.org/predictions?vehicles=' + sondeID).then(function (response) {
     response.json().then(function (result) {
       if (result.length > 0) {
         const pathData = JSON.parse(result[0].data);
-
-        sondeList[sondeID].pred_landing = {
-          serial: result[0].vehicle,
-          loc: pathData[pathData.length - 1],
-          time: new Date(result[0].time),
-          ascent_rate: result[0].ascent_rate,
-          descent_rate: result[0].descent_rate,
-        };
-
         let polyline = [];
         for (let index = 0; index < pathData.length; index++) {
           const entry = pathData[index];
-          polyline.push({lat: entry.lat, lon: entry.lon});
+          polyline.push({lat: entry['lat'], lon: entry['lon']});
         }
         // console.log('Adding ' + polyline.length + ' predicted path points for sonde ' + sondeID);
 
-        // Check if predicted path has already been added previously, if not, add it
         if (sondeList[sondeID].predictedPath == null) {
-          let path = ui.addPath(polyline, 'predict', sondeList[sondeID].data);
+          let path = ui.addPath(polyline, 'predict');
           sondeList[sondeID].predictedPath = path;
-          ui.updatePath(path, polyline, sondeList[sondeID].data, sondeList[sondeID].pred_landing);
         }
         else {
           let path = sondeList[sondeID].predictedPath;
-          ui.updatePath(path, polyline, sondeList[sondeID].data, sondeList[sondeID].pred_landing);
+          ui.updatePath(path, polyline);
         }
       }
     })
@@ -292,22 +283,54 @@ function distVincenty(lat1, lon1, lat2, lon2) {
 
   return s.toFixed(3); // round to 1mm precision
 }
+
+function getBearing(lat1, lon1, lat2, lon2) {
+    let x, y, brng;
+    lon1 = lon1 * deg2rad;
+    lon2 = lon2 * deg2rad;
+    lat1 = lat1 * deg2rad;
+    lat2 = lat2 * deg2rad;
+    y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+    x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(lon2-lon1);
+    brng = Math.atan2(y, x);
+    brng = (brng*180/Math.PI + 360) % 360; // in degrees
+    return brng;
+}
+        
 /*!
- * JavaScript function to calculate bearing from lat1/lon1 to lat2/lon2
+ * JavaScript function to send chase can position
  *
- * Original scripts by Chris Veness.
- * Taken from http://movable-type.co.uk/scripts/latlong-vincenty.html and optimized / cleaned up by Mathias Bynens <http://mathiasbynens.be/>
- * Maybe... Don't remember
+ * Original examples  from google/interner.
  *
- * @param   {Number} lat1, lon1: first point in decimal degrees
- * @param   {Number} lat2, lon2: second point in decimal degrees
- * @returns {Number} bering in degrees
+ * @param   {Number} lat1, lon1: chase car location in decimal degrees
+ * @param   {Number} alt: chase car altitude in meters
+ * @param   {String} callsign, antenna, email: Additional info
+ * @returns Nothing to return yet
  */
-function calcBearing(lat1, lon1, lat2, lon2) {
-  let x, y, brng
-  y = Math.sin(lon2-lon1) * Math.cos(lat2);
-  x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(lon2-lon1);
-  brng = Math.atan2(y, x);
-  brng = (brng*180/Math.PI + 360) % 360; // in degrees
-  return brng;
+
+function doChaseUpload(lat, lon, alt, callsign, antenna, email){
+    let url = "https://api.v2.sondehub.org/listeners";
+
+    let data = `{"software_name": "kgChase",
+        "software_version": "0.0.1",
+        "uploader_callsign": "` + callsign + `",
+        "uploader_position": [` + lat +`, ` + lon + `, ` + alt + `],
+        "uploader_antenna": "` + antenna + `",
+        "uploader_contact_email": "` + email + `",
+        "mobile": true
+    }`;
+
+    let xhr = new XMLHttpRequest();
+
+    xhr.onreadystatechange = function () {
+       if (xhr.readyState === 4) {
+          //console.log(myxhr.status);
+          //console.log(myxhr.statusText);
+          console.log(myxhr.responseText.toString());
+       }};
+
+
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.send(data);
 }
