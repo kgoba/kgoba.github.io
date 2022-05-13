@@ -47,7 +47,6 @@
         const sondeColorAged  = '#0088FFAA';       // If no data for sondeAgeMs miliseconds - yellow
 
         function inRange(point) {
-            // return (Math.abs(point[0] - mapCenter[1]) < 20) && (Math.abs(point[1] - mapCenter[0]) < 14);
             return map.distance(mapCenter, [point.lat, point.lon]) < (mapRadiusKm * 1000);
         }
 
@@ -103,12 +102,18 @@
         let myPos = null;
 
         // Add scale control to the map
-        L.control.scale().addTo(map);
+        L.control.scale({position: 'topright'}).addTo(map);
 
         map.setView(mapCenter, 6);
 
         // Move the default location of zoom control
         map.zoomControl.setPosition('bottomright');
+
+        // var predLandingIcon = L.icon({
+        //     iconUrl: 'png/path4138.png',
+        //     iconSize: [12, 12],
+        //     // iconAnchor: [12, 12],
+        // });
 
         function onLocationFound(e) {
             let radius = e.accuracy / 2;
@@ -242,7 +247,8 @@
                 path.addTo(map);
                 if (pathType == 'predict') {
                     const lastPoint = pointList[pointList.length - 1];
-                    let marker = L.circleMarker([lastPoint.lat, lastPoint.lon], { radius: 9, fill: true, color: '#000000CC', fillColor: '#000000DD', weight: 1 });
+                    // let marker = L.marker([lastPoint.lat, lastPoint.lon], {icon: predLandingIcon});
+                    let marker = L.circleMarker([lastPoint.lat, lastPoint.lon], { radius: 5, fill: true, color: '#000000CC', fillColor: '#000000DD', weight: 1 });
                     marker.addTo(map);
 
                     let content = lastPoint.lat.toFixed(5) + ' ' + lastPoint.lon.toFixed(5);
@@ -271,7 +277,6 @@
                     content += ' | Descent: ' + pred_landing.descent_rate.toFixed(1) + 'm/s';
                     if (myPos != null) {
                         let distStr;
-                        // let distance = map.distance(myPos, [pred_landing.loc.lat, pred_landing.loc.lon]);
                         let distance = map.distance(myPos, pred_landing.loc);
                         if (distance > 2000) {
                             distStr = (distance / 1000).toFixed(1) + 'km';
