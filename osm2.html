@@ -162,6 +162,11 @@
                 else {
                     content += data.type;
                 }
+
+                const geoURI = 'geo:' + data.lat.toFixed(6) + ',' + data.lon.toFixed(6);
+                const linkText = data.lat.toFixed(5) + ', ' + data.lon.toFixed(5);
+                content += '<br/>Lat/lon: <a href="'+ geoURI + '">' + linkText + '</a>';
+
                 content += '<br/>Alt: ' + data.alt.toFixed(0) + 'm | V: ';
                 if (data.vel_v != null) {
                     content += data.vel_v.toFixed(1);
@@ -195,7 +200,6 @@
                     content += data.frequency.toFixed(2) + 'MHz | ';
                 }
                 const lastRXDate = new Date(data.time_received);
-                // content += lastRXDate.getHours() + ':' + lastRXDate.getMinutes() + ':' + lastRXDate.getSeconds() + ' | ';
                 content += lastRXDate.toLocaleTimeString() + ' | ';
                 const ageSeconds = (Date.now() - lastRXDate) / 1000;
                 if (ageSeconds < 60) {
@@ -231,8 +235,6 @@
                         content += ' (' + data.snr.toFixed(0) + 'dB)';
                     }
                 }
-                content += '<br/>';
-                content += data.lat.toFixed(5) + ' ' + data.lon.toFixed(5);
                 marker.bindPopup(content);
             },
             addPath: function(pointList, pathType, data) {
@@ -267,7 +269,7 @@
                 handle.marker.setLatLng([lastPoint.lat, lastPoint.lon]);
 
                 const geoURI = 'geo:' + lastPoint.lat.toFixed(6) + ',' + lastPoint.lon.toFixed(6);
-                const linkText = lastPoint.lat.toFixed(6) + ', ' + lastPoint.lon.toFixed(6);
+                const linkText = lastPoint.lat.toFixed(5) + ', ' + lastPoint.lon.toFixed(5);
                 let content = '<b>' + data.serial + '</b> landing prediction';
                 content += '<br/>Lat/lon: <a href="'+ geoURI + '">' + linkText + '</a>';
                 if (pred_landing != null) {
